@@ -13,7 +13,7 @@ import (
 )
 
 type Web3 struct {
-	rpc *EthRPC
+	Rpc           *EthRPC
 	privateKeyMap map[string]string // address -> privateKey
 }
 
@@ -22,14 +22,15 @@ func NewWeb3(ethereumNodeUrl string) *Web3 {
 	return &Web3{rpc,map[string]string{}}
 }
 
-func (w *Web3)AddPrivateKey(privateKey string) error {
+func (w *Web3)AddPrivateKey(privateKey string) (newAddress string, err error) {
 	pk,err:=utils.NewPrivateKeyByHex(privateKey)
 	if err!=nil {
-		return err
+		return
 	}
-	address:=utils.PubKey2Address(pk.PublicKey)
-	w.privateKeyMap[strings.ToLower(address)] = strings.ToLower(privateKey)
-	return nil
+	newAddress=utils.PubKey2Address(pk.PublicKey)
+	w.privateKeyMap[strings.ToLower(newAddress)] = strings.ToLower(privateKey)
+
+	return
 }
 
 type SendTxParams struct {
@@ -66,7 +67,7 @@ func (c *Contract) Call(functionName string, args ...interface{}) (resp string,e
 	if err!=nil{
 		return
 	}
-	return c.web3.rpc.EthCall(T{
+	return c.web3.Rpc.EthCall(T{
 			To:c.address.String(),
 			From:"0x0000000000000000000000000000000000000000",
 			Data:fmt.Sprintf("0x%x", dataByte)},
@@ -102,5 +103,5 @@ func (c *Contract) Send(params *SendTxParams, amount *big.Int, functionName stri
 	if err != nil {
 		panic(err)
 	}
-	return c.web3.rpc.EthSendRawTransaction(rawData)
+	return c.web3.Rpc.EthSendRawTransaction(rawData)
 }

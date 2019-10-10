@@ -37,7 +37,7 @@ type ethRequest struct {
 	Params  []interface{} `json:"params"`
 }
 
-// EthRPC - Ethereum rpc client
+// EthRPC - Ethereum Rpc client
 type EthRPC struct {
 	url    string
 	client httpClient
@@ -45,7 +45,7 @@ type EthRPC struct {
 	Debug  bool
 }
 
-// New create new rpc client with given url
+// New create new Rpc client with given url
 func New(url string, options ...func(rpc *EthRPC)) *EthRPC {
 	rpc := &EthRPC{
 		url:    url,
@@ -59,7 +59,7 @@ func New(url string, options ...func(rpc *EthRPC)) *EthRPC {
 	return rpc
 }
 
-// NewEthRPC create new rpc client with given url
+// NewEthRPC create new Rpc client with given url
 func NewEthRPC(url string, options ...func(rpc *EthRPC)) *EthRPC {
 	return New(url, options...)
 }

@@ -1,113 +1,180 @@
 package clients
 
 import (
-"encoding/json"
-"errors"
-"fmt"
+	"auctionBidder/utils"
+	"auctionBidder/web3"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/shopspring/decimal"
-"github.com/sirupsen/logrus"
-"strconv"
-"time"
+	"github.com/sirupsen/logrus"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
+type SimpleOrder struct {
+	Amount          decimal.Decimal
+	Price           decimal.Decimal
+	Side 			string
+}
+
+type OrderRes struct {
+	Id              string
+	Status          string
+	Amount          decimal.Decimal
+	Price           decimal.Decimal
+	AvailableAmount decimal.Decimal
+	FilledAmount    decimal.Decimal
+	AvgPrice        decimal.Decimal
+	Side            string
+}
+
+type Balance struct {
+	Free  decimal.Decimal
+	Lock  decimal.Decimal
+	Total decimal.Decimal
+}
+
+type Inventory struct {
+	Quote Balance
+	Base  Balance
+}
+
 type DdexClient struct {
-	PrivateKey string
-	Address            string
-	QuoteTokenSymbol   string
-	QuoteTokenAddress  string
-	BaseTokenSymbol    string
-	BaseTokenAddress   string
-	BasicUrl            string
-	PricePrecision     int
-	PriceDecimal       int
-	AmountDecimal      int
-	MinAmount          decimal.Decimal
+	hydroContract     *web3.Contract
+	privateKey        string
+	signCache         string
+	lastSignTime      int64
+	address           string
+	tradingPair       string
+	quoteTokenSymbol  string
+	quoteTokenAddress string
+	quoteTokenDecimal int
+	baseTokenSymbol   string
+	baseTokenAddress  string
+	baseTokenDecimal  int
+	baseUrl           string
+	pricePrecision    int
+	priceDecimal      int
+	amountDecimal     int
+	minAmount         decimal.Decimal
 }
 
-func GetDdexClient(privateKey string, tradingPair string){
+func NewDdexClient(privateKey string, baseTokenSymbol string, quoteTokenSymbol string) (client *DdexClient, err error) {
+	ethereumNodeUrl:=os.Getenv("ETHEREUM_NODE_URL")
+	ddexBaseUrl :=os.Getenv("DDEX_URL")
+	hydroContractAddress:=os.Getenv("HYDRO_CONTRACT_ADDRESS")
 
+	web3:=web3.NewWeb3(ethereumNodeUrl)
+	address,err:=web3.AddPrivateKey(privateKey)
+	if err!=nil {
+		return
+	}
+	contract,err:=web3.NewContract(utils.HydroAbi, hydroContractAddress)
+	if err!=nil {
+		return
+	}
+	// get market meta data
+	var dataContainer IDdexMarkets
+	resp, err := utils.Get(
+		utils.JoinUrlPath(ddexBaseUrl,fmt.Sprintf("markets/%s-%s", baseTokenSymbol, quoteTokenSymbol)),
+		"",
+		utils.EmptyKeyPairList,
+		[]utils.KeyPair{{"Content-Type", "application/json"}})
+	if err != nil {
+		return
+	}
+	json.Unmarshal([]byte(resp), &dataContainer)
+	if dataContainer.Desc != "success" {
+		err = errors.New(dataContainer.Desc)
+		return
+	}
+	minAmount, _ := decimal.NewFromString(dataContainer.Data.Market.MinOrderSize)
+
+	client = &DdexClient{
+		contract,
+		privateKey,
+		"",
+		0,
+		address,
+		fmt.Sprintf("%s-%s",baseTokenSymbol, quoteTokenSymbol),
+		quoteTokenSymbol,
+		dataContainer.Data.Market.QuoteAssetAddress,
+		dataContainer.Data.Market.QuoteAssetDecimals,
+		baseTokenSymbol,
+		dataContainer.Data.Market.BaseAssetAddress,
+		dataContainer.Data.Market.BaseAssetDecimals,
+		ddexBaseUrl,
+		dataContainer.Data.Market.PricePrecision,
+		dataContainer.Data.Market.PriceDecimals,
+		dataContainer.Data.Market.AmountDecimals,
+		minAmount,
+	}
+
+	return
 }
 
-func (client *DdexClient) TradingPair() string {
-	return client.BaseTokenSymbol + "-" + client.QuoteTokenSymbol
+func (client *DdexClient) updateSignCache() {
+	now := utils.MillisecondTimestamp()
+	if client.lastSignTime<now-200000 {
+		messageStr := "HYDRO-AUTHENTICATION@"+strconv.Itoa(int(now))
+		signRes,_:=utils.PersonalSign([]byte(messageStr),client.privateKey)
+		client.signCache = fmt.Sprintf("%s#%s#0x%x", strings.ToLower(client.address), messageStr, signRes)
+		client.lastSignTime = now
+	}
+}
+
+func (client *DdexClient) signOrderId(orderId string)string{
+	if strings.HasPrefix(orderId, "0x") {
+		orderId = orderId[2:]
+	}
+	orderIdHex,_:=hex.DecodeString(orderId)
+	signature,_:=utils.PersonalSign(orderIdHex, client.privateKey)
+	return "0x"+hex.EncodeToString(signature)
 }
 
 func (client *DdexClient) get(path string, params []utils.KeyPair) (string, error) {
-	hydroAuthStr, err := privateKeyManager.PkmGetHydroAuth(client.PrivateKeyNickName)
-	if err != nil {
-		return "", err
-	}
+	client.updateSignCache()
 	return utils.Get(
-		utils.JoinUrlPath(client.BaseUrl, path),
+		utils.JoinUrlPath(client.baseUrl, path),
 		"",
 		params,
 		[]utils.KeyPair{
-			{"Hydro-Authentication", hydroAuthStr},
+			{"Hydro-Authentication", client.signCache},
 			{"Content-Type", "application/json"},
 		},
 	)
 }
 
 func (client *DdexClient) post(path string, body string, params []utils.KeyPair) (string, error) {
-	hydroAuthStr, err := privateKeyManager.PkmGetHydroAuth(client.PrivateKeyNickName)
-	if err != nil {
-		return "", err
-	}
+	client.updateSignCache()
 	return utils.Post(
-		utils.JoinUrlPath(client.BaseUrl, path),
+		utils.JoinUrlPath(client.baseUrl, path),
 		body,
 		params,
 		[]utils.KeyPair{
-			{"Hydro-Authentication", hydroAuthStr},
+			{"Hydro-Authentication", client.signCache},
 			{"Content-Type", "application/json"},
 		},
 	)
 }
 
 func (client *DdexClient) delete(path string, params []utils.KeyPair) (string, error) {
-	hydroAuthStr, err := privateKeyManager.PkmGetHydroAuth(client.PrivateKeyNickName)
-	if err != nil {
-		return "", err
-	}
+	client.updateSignCache()
 	return utils.Delete(
-		utils.JoinUrlPath(client.BaseUrl, path),
+		utils.JoinUrlPath(client.baseUrl, path),
 		"",
 		params,
 		[]utils.KeyPair{
-			{"Hydro-Authentication", hydroAuthStr},
+			{"Hydro-Authentication", client.signCache},
 			{"Content-Type", "application/json"},
 		},
 	)
-}
-
-func (client *DdexClient) Init() error {
-	address, err := privateKeyManager.PkmGetAddressFromNickname(client.PrivateKeyNickName)
-	if err != nil {
-		return err
-	}
-	client.Address = address
-	var dataContainer apiResponseInterface.IDdexMarkets
-	resp, err := client.get("markets/"+client.TradingPair(), utils.EmptyKeyPairList)
-	if err != nil {
-		return err
-	}
-	json.Unmarshal([]byte(resp), &dataContainer)
-	if dataContainer.Desc != "success" {
-		return errors.New(fmt.Sprintf("unmarshal failed %s", resp))
-	}
-	client.BaseTokenAddress = dataContainer.Data.Market.BaseAssetAddress
-	client.QuoteTokenAddress = dataContainer.Data.Market.QuoteAssetAddress
-	client.PriceDecimal = dataContainer.Data.Market.PriceDecimals
-	client.PricePrecision = dataContainer.Data.Market.PricePrecision
-	client.AmountDecimal = dataContainer.Data.Market.AmountDecimals
-	minAmount, err := decimal.NewFromString(dataContainer.Data.Market.MinOrderSize)
-	if err != nil {
-		return errors.New(fmt.Sprintf("parse min order size failed %s", dataContainer.Data.Market.MinOrderSize))
-	} else {
-		client.MinAmount = minAmount
-	}
-	return nil
 }
 
 func (client *DdexClient) buildUnsignedOrder(
@@ -117,7 +184,7 @@ func (client *DdexClient) buildUnsignedOrder(
 	orderType string,
 	isMakerOnly bool,
 	expireTimeInSecond int64) (string, error) {
-	var dataContainer apiResponseInterface.IBuildOrder
+	var dataContainer IBuildOrder
 	var body = struct {
 		MarketId    string          `json:"marketId"`
 		Side        string          `json:"side"`
@@ -127,7 +194,7 @@ func (client *DdexClient) buildUnsignedOrder(
 		Expires     int64           `json:"expires"`
 		IsMakerOnly bool            `json:"isMakerOnly"`
 		WalletType  string          `json:"walletType"`
-	}{client.TradingPair(), side, orderType, price, amount, expireTimeInSecond, isMakerOnly, "trading"}
+	}{client.tradingPair, side, orderType, price, amount, expireTimeInSecond, isMakerOnly, "trading"}
 	bodyBytes, _ := json.Marshal(body)
 	resp, err := client.post("orders/build", string(bodyBytes), utils.EmptyKeyPairList)
 	if err != nil {
@@ -142,77 +209,22 @@ func (client *DdexClient) buildUnsignedOrder(
 }
 
 func (client *DdexClient) placeOrder(orderId string) bool {
-	signature, err := privateKeyManager.PkmSignOrderId(client.PrivateKeyNickName, orderId)
-	if err != nil {
-		return false
-	}
 	var body = struct {
 		OrderId   string `json:"orderId"`
 		Signature string `json:"signature"`
-	}{orderId, signature}
+	}{orderId, client.signOrderId(orderId)}
 	bodyBytes, _ := json.Marshal(body)
 	resp, err := client.post("orders", string(bodyBytes), utils.EmptyKeyPairList)
 	if err != nil {
 		return false
 	}
-	var dataContainer apiResponseInterface.IPlaceOrder
+	var dataContainer IPlaceOrder
 	json.Unmarshal([]byte(resp), &dataContainer)
 	if dataContainer.Desc != "success" {
 		spew.Dump(dataContainer)
 		return false
 	} else {
 		return true
-	}
-}
-
-func (client *DdexClient) placeOrderSynchronously(orderId string) (*StdOrder, error) {
-	signature, err := privateKeyManager.PkmSignOrderId(client.PrivateKeyNickName, orderId)
-	if err != nil {
-		return nil, err
-	}
-	var body = struct {
-		OrderId   string `json:"orderId"`
-		Signature string `json:"signature"`
-	}{orderId, signature}
-	bodyBytes, _ := json.Marshal(body)
-	resp, err := client.post("orders/sync", string(bodyBytes), utils.EmptyKeyPairList)
-	if err != nil {
-		return nil, err
-	}
-	var dataContainer apiResponseInterface.IPlaceOrderSync
-	json.Unmarshal([]byte(resp), &dataContainer)
-	if dataContainer.Desc != "success" {
-		return nil, errors.New("")
-	} else {
-		orderInfo := client.parseDdexOrderResp(dataContainer.Data.Order)
-		return &orderInfo, nil
-	}
-}
-
-func (client *DdexClient) CreateMarketOrder(
-	priceLimit decimal.Decimal,
-	amount decimal.Decimal,
-	side string,
-) (*StdOrder, error) {
-
-	validPrice := utils.SetDecimal(utils.SetPrecision(priceLimit, client.PricePrecision), client.PriceDecimal)
-	if side == utils.SELL {
-		amount = utils.SetDecimal(amount, client.AmountDecimal)
-	}
-
-	orderId, err := client.buildUnsignedOrder(validPrice, amount, side, utils.MARKET, false, 3600)
-	if err != nil {
-		return nil, err
-	}
-	orderInfo, err := client.placeOrderSynchronously(orderId)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("ddex client %s place order sync failed", client.TradingPair()))
-	}
-	if orderInfo.FilledAmount.Equal(decimal.Zero) {
-		return nil, errors.New(fmt.Sprintf("ddex client %s market order price protect triggered", client.TradingPair()))
-	} else {
-		logrus.Infof("ddex client %s create market order - price:%s amount:%s side:%s %s", client.TradingPair(), validPrice, amount, side, orderId)
-		return orderInfo, nil
 	}
 }
 
@@ -223,23 +235,23 @@ func (client *DdexClient) CreateLimitOrder(
 	isMakerOnly bool,
 	expireTimeInSecond int64) (string, error) {
 
-	validPrice := utils.SetDecimal(utils.SetPrecision(price, client.PricePrecision), client.PriceDecimal)
+	validPrice := utils.SetDecimal(utils.SetPrecision(price, client.pricePrecision), client.priceDecimal)
 
-	validAmount := utils.SetDecimal(amount, client.AmountDecimal)
-	if validAmount.Mul(validPrice).LessThan(client.MinAmount) {
-		return "", errors.New(fmt.Sprintf("ddex client %s create order amount %s less than min amount %s", client.TradingPair(), validAmount.String(), client.MinAmount.String()))
+	validAmount := utils.SetDecimal(amount, client.amountDecimal)
+	if validAmount.Mul(validPrice).LessThan(client.minAmount) {
+		return "", errors.New(fmt.Sprintf("ddex client %s create order amount %s less than min amount %s", client.tradingPair, validAmount.String(), client.minAmount.String()))
 	}
 
-	orderId, err := client.buildUnsignedOrder(validPrice, validAmount, side, utils.LIMIT, isMakerOnly, expireTimeInSecond)
+	orderId, err := client.buildUnsignedOrder(validPrice, validAmount, side, "limit", isMakerOnly, expireTimeInSecond)
 	if err != nil {
 		return "", err
 	}
 	placeSuccess := client.placeOrder(orderId)
 	if placeSuccess {
-		logrus.Infof("ddex client %s create limit order - price:%s amount:%s side:%s %s", client.TradingPair(), validPrice, validAmount, side, orderId)
+		logrus.Infof("ddex client %s create limit order - price:%s amount:%s side:%s %s", client.tradingPair, validPrice, validAmount, side, orderId)
 		return orderId, nil
 	} else {
-		return "", errors.New(fmt.Sprintf("ddex client %s place order failed", client.TradingPair()))
+		return "", errors.New(fmt.Sprintf("ddex client %s place order failed", client.tradingPair))
 	}
 }
 
@@ -248,12 +260,12 @@ func (client *DdexClient) CancelOrder(orderId string) error {
 	if err != nil {
 		return err
 	}
-	var dataContainer apiResponseInterface.ICancelOrder
+	var dataContainer ICancelOrder
 	json.Unmarshal([]byte(resp), &dataContainer)
 	if dataContainer.Desc != "success" {
-		return errors.New(fmt.Sprintf("ddex client %s cancel order %s failed", client.TradingPair(), orderId))
+		return errors.New(fmt.Sprintf("ddex client %s cancel order %s failed", client.tradingPair, orderId))
 	} else {
-		logrus.Infof("ddex client %s cancel order %s succeed", client.TradingPair(), orderId)
+		logrus.Infof("ddex client %s cancel order %s succeed", client.tradingPair, orderId)
 		return nil
 	}
 }
@@ -269,22 +281,22 @@ func (client *DdexClient) PromisedCancelOrder(orderId string) {
 }
 
 func (client *DdexClient) CancelAllPendingOrders() (bool, error) {
-	resp, err := client.delete("orders", []utils.KeyPair{{"marketId", client.TradingPair()}})
+	resp, err := client.delete("orders", []utils.KeyPair{{"marketId", client.tradingPair}})
 	if err != nil {
 		return false, err
 	}
-	var dataContainer apiResponseInterface.ICancelOrder
+	var dataContainer ICancelOrder
 	json.Unmarshal([]byte(resp), &dataContainer)
 	if dataContainer.Desc != "success" {
-		return false, errors.New(fmt.Sprintf("ddex client %s cancel all pending orders failed", client.TradingPair()))
+		return false, errors.New(fmt.Sprintf("ddex client %s cancel all pending orders failed", client.tradingPair))
 	} else {
-		logrus.Infof("ddex client %s cancel all orders succeed", client.TradingPair())
+		logrus.Infof("ddex client %s cancel all orders succeed", client.tradingPair)
 		return true, nil
 	}
 }
 
-func (client *DdexClient) parseDdexOrderResp(orderInfo apiResponseInterface.IDDEXOrderResp) StdOrder {
-	var orderData = EmptyStdOrder
+func (client *DdexClient) parseDdexOrderResp(orderInfo IDDEXOrderResp) *OrderRes {
+	var orderData = &OrderRes{}
 	orderData.Id = orderInfo.ID
 	orderData.Amount, _ = decimal.NewFromString(orderInfo.Amount)
 	orderData.AvailableAmount, _ = decimal.NewFromString(orderInfo.AvailableAmount)
@@ -306,51 +318,48 @@ func (client *DdexClient) parseDdexOrderResp(orderInfo apiResponseInterface.IDDE
 	return orderData
 }
 
-func (client *DdexClient) GetOrder(orderId string) (StdOrder, error) {
-	orderData := EmptyStdOrder
+func (client *DdexClient) GetOrder(orderId string) (res *OrderRes, err error) {
 	resp, err := client.get("orders/"+orderId, utils.EmptyKeyPairList)
 	if err != nil {
-		return orderData, err
+		return
 	}
-	var dataContainer apiResponseInterface.IOrder
+	var dataContainer IOrder
 	json.Unmarshal([]byte(resp), &dataContainer)
 	if dataContainer.Desc != "success" {
-		return orderData, errors.New(fmt.Sprintf("ddex client %s get order failed", client.TradingPair()))
+		err = errors.New(dataContainer.Desc)
+		return
 	} else {
-		orderData = client.parseDdexOrderResp(dataContainer.Data.Order)
-		return orderData, nil
+		return client.parseDdexOrderResp(dataContainer.Data.Order),nil
 	}
 }
 
-func (client *DdexClient) PromisedGetClosedOrder(orderId string) StdOrder {
-	var orderInfo StdOrder
+func (client *DdexClient) PromisedGetClosedOrder(orderId string) *OrderRes {
 	for true {
 		info, err := client.GetOrder(orderId)
 		if err == nil && info.Status == utils.ORDER_CLOSE {
-			orderInfo = info
-			break
+			return info
 		}
 		time.Sleep(1 * time.Second)
 	}
-	return orderInfo
+	return nil
 }
 
-func (client *DdexClient) GetAllPendingOrders() ([]StdOrder, error) {
-	var allOrders = []StdOrder{}
+func (client *DdexClient) GetAllPendingOrders() ([]*OrderRes, error) {
+	var allOrders = []*OrderRes{}
 	var pageNum = 1
 	for true {
 		resp, err := client.get("orders", []utils.KeyPair{
-			{"marketId", client.TradingPair()},
+			{"marketId", client.tradingPair},
 			{"perPage", "100"},
 			{"page", strconv.Itoa(pageNum)},
 		})
 		if err != nil {
 			return allOrders, err
 		}
-		var dataContainer apiResponseInterface.IAllPendingOrders
+		var dataContainer IAllPendingOrders
 		json.Unmarshal([]byte(resp), &dataContainer)
 		if dataContainer.Desc != "success" {
-			return allOrders, errors.New(fmt.Sprintf("ddex client %s get all pending orders failed", client.TradingPair()))
+			return allOrders, errors.New(fmt.Sprintf("ddex client %s get all pending orders failed", client.tradingPair))
 		}
 		for _, order := range dataContainer.Data.Orders {
 			var tempOrder = client.parseDdexOrderResp(order)
@@ -364,110 +373,77 @@ func (client *DdexClient) GetAllPendingOrders() ([]StdOrder, error) {
 	return allOrders, nil
 }
 
-func (client *DdexClient) GetInventory() (inventory Inventory, err error) {
-	inventory = EmptyInventory
-
-	_, totalBaseAmount, err := utils.GetBfdBalance(client.BaseTokenAddress, client.Address)
+func (client *DdexClient) GetInventory() (inventory *Inventory, err error) {
+	baseAmountHex, err := client.hydroContract.Call("balanceOf", common.HexToAddress(client.baseTokenAddress), common.HexToAddress(client.address))
 	if err != nil {
 		return
 	}
-	_, totalQuoteAmount, err := utils.GetBfdBalance(client.QuoteTokenAddress, client.Address)
+	quoteAmountHex, err := client.hydroContract.Call("balanceOf", common.HexToAddress(client.quoteTokenAddress), common.HexToAddress(client.address))
 	if err != nil {
 		return
 	}
-	totalBaseAmount, err = utils.ConvertToReadableValue(client.BaseTokenAddress, totalBaseAmount)
-	if err != nil {
-		return
-	}
-	totalQuoteAmount, err = utils.ConvertToReadableValue(client.QuoteTokenAddress, totalQuoteAmount)
-	if err != nil {
-		return
-	}
+	baseAmount := decimal.NewFromBigInt(utils.Hex2BigInt(baseAmountHex), int32(-1*client.baseTokenDecimal))
+	quoteAmount := decimal.NewFromBigInt(utils.Hex2BigInt(quoteAmountHex), int32(-1*client.quoteTokenDecimal))
 
 	resp, err := client.get("account/lockedBalances", utils.EmptyKeyPairList)
 	if err != nil {
 		return
 	}
-	var dataContainer apiResponseInterface.ILockedBalance
+	var dataContainer ILockedBalance
 	json.Unmarshal([]byte(resp), &dataContainer)
 	if dataContainer.Desc != "success" {
-		return inventory, err
+		err = errors.New(dataContainer.Desc)
+		return
 	}
-	lockedBase := &decimal.Zero
-	lockedQuote := &decimal.Zero
+	lockedBase := decimal.Zero
+	lockedQuote := decimal.Zero
 	for _, lockedBalance := range dataContainer.Data.LockedBalances {
-		if lockedBalance.AssetAddress == client.BaseTokenAddress && lockedBalance.WalletType == "trading" {
-			amount, err := decimal.NewFromString(lockedBalance.Amount)
-			if err != nil {
-				return inventory, err
-			}
-			readableAmount, err := utils.ConvertToReadableValue(client.BaseTokenAddress, &amount)
-			if err != nil {
-				return inventory, err
-			}
-			lockedBase = readableAmount
+		if lockedBalance.AssetAddress == client.baseTokenAddress && lockedBalance.WalletType == "trading" {
+			amount, _ := decimal.NewFromString(lockedBalance.Amount)
+			lockedBase = amount.Mul(decimal.New(1, int32(-1*client.baseTokenDecimal)))
 		}
-		if lockedBalance.AssetAddress == client.QuoteTokenAddress && lockedBalance.WalletType == "trading" {
-			amount, err := decimal.NewFromString(lockedBalance.Amount)
-			if err != nil {
-				return inventory, err
-			}
-			readableAmount, err := utils.ConvertToReadableValue(client.QuoteTokenAddress, &amount)
-			if err != nil {
-				return inventory, err
-			}
-			lockedQuote = readableAmount
+		if lockedBalance.AssetAddress == client.quoteTokenAddress && lockedBalance.WalletType == "trading" {
+			amount, _ := decimal.NewFromString(lockedBalance.Amount)
+			lockedQuote = amount.Mul(decimal.New(1, int32(-1*client.quoteTokenDecimal)))
 		}
 	}
 
-	inventory.Base.Total = *totalBaseAmount
-	inventory.Base.Lock = *lockedBase
-	inventory.Base.Free = totalBaseAmount.Sub(*lockedBase)
-
-	inventory.Quote.Total = *totalQuoteAmount
-	inventory.Quote.Lock = *lockedQuote
-	inventory.Quote.Free = totalQuoteAmount.Sub(*lockedQuote)
-
-	return inventory, nil
+	inventory = &Inventory{
+	Balance{
+		baseAmount.Sub(lockedBase),
+		lockedBase,
+		baseAmount,
+		},
+		Balance{
+			quoteAmount.Sub(lockedQuote),
+			lockedQuote,
+			quoteAmount,
+		},
+	}
+	return
 }
 
-func (client *DdexClient) GetTicker() (Ticker, error) {
-	var ticker = EmptyTicker
-	resp, err := client.get("markets/"+client.TradingPair()+"/ticker", utils.EmptyKeyPairList)
-	if err != nil {
-		return ticker, err
-	}
-	var dataContainer apiResponseInterface.ITicker
-	json.Unmarshal([]byte(resp), &dataContainer)
-	if dataContainer.Desc != "success" {
-		return ticker, errors.New(fmt.Sprintf("ddex client %s get ticker failed", client.TradingPair()))
-	}
-	ticker.LastPrice, _ = decimal.NewFromString(dataContainer.Data.Ticker.Price)
-	ticker.BuyPrice, _ = decimal.NewFromString(dataContainer.Data.Ticker.Bid)
-	ticker.SellPrice, _ = decimal.NewFromString(dataContainer.Data.Ticker.Ask)
-	return ticker, nil
-}
-
-func (client *DdexClient) GetCurrentPrice() (
+func (client *DdexClient) GetMarketPrice() (
 	bestBidPrice decimal.Decimal,
 	bestAskPrice decimal.Decimal,
-	centerPrice decimal.Decimal,
+	midPrice decimal.Decimal,
 	err error) {
 	resp, err := client.get(
-		fmt.Sprintf("markets/%s/orderbook", client.TradingPair()),
+		fmt.Sprintf("markets/%s/orderbook", client.tradingPair),
 		[]utils.KeyPair{{"level", "1"}},
 	)
 	if err != nil {
-		return decimal.Zero, decimal.Zero, decimal.Zero, err
+		return
 	}
-	var dataContainer apiResponseInterface.ILevel1Orderbook
+	var dataContainer ILevel1Orderbook
 	json.Unmarshal([]byte(resp), &dataContainer)
 	if len(dataContainer.Data.OrderBook.Asks) == 0 || len(dataContainer.Data.OrderBook.Bids) == 0 {
-		return decimal.Zero, decimal.Zero, decimal.Zero, errors.New("ddex client get current price failed")
+		err = errors.New("current orderbook not complete")
+		return
 	}
 	bestAskPrice, _ = decimal.NewFromString(dataContainer.Data.OrderBook.Asks[0].Price)
 	bestBidPrice, _ = decimal.NewFromString(dataContainer.Data.OrderBook.Bids[0].Price)
-	centerPrice = bestAskPrice.Add(bestBidPrice).Div(decimal.New(2, 0))
+	midPrice = bestAskPrice.Add(bestBidPrice).Div(decimal.New(2, 0))
 
-	return bestBidPrice, bestAskPrice, centerPrice, nil
+	return
 }
