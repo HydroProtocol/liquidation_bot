@@ -61,7 +61,7 @@ func (t T) MarshalJSON() ([]byte, error) {
 		params["gas"] = utils.IntToHex(t.Gas)
 	}
 	if t.GasPrice != nil {
-		params["gasPrice"] = utils.BigToHex(*t.GasPrice)
+		params["GasPrice"] = utils.BigToHex(*t.GasPrice)
 	}
 	if t.Value != nil {
 		params["value"] = utils.BigToHex(*t.Value)
@@ -70,7 +70,7 @@ func (t T) MarshalJSON() ([]byte, error) {
 		params["data"] = t.Data
 	}
 	if t.Nonce > 0 {
-		params["nonce"] = utils.IntToHex(t.Nonce)
+		params["Nonce"] = utils.IntToHex(t.Nonce)
 	}
 
 	return json.Marshal(params)
@@ -204,7 +204,7 @@ type proxySyncing struct {
 
 type proxyTransaction struct {
 	Hash             string  `json:"hash"`
-	Nonce            hexInt  `json:"nonce"`
+	Nonce            hexInt  `json:"Nonce"`
 	BlockHash        string  `json:"blockHash"`
 	BlockNumber      *hexInt `json:"blockNumber"`
 	TransactionIndex *hexInt `json:"transactionIndex"`
@@ -212,7 +212,7 @@ type proxyTransaction struct {
 	To               string  `json:"to"`
 	Value            hexBig  `json:"value"`
 	Gas              hexInt  `json:"gas"`
-	GasPrice         hexBig  `json:"gasPrice"`
+	GasPrice         hexBig  `json:"GasPrice"`
 	Input            string  `json:"input"`
 }
 
@@ -268,7 +268,7 @@ type proxyBlockWithTransactions struct {
 	Number           hexInt             `json:"number"`
 	Hash             string             `json:"hash"`
 	ParentHash       string             `json:"parentHash"`
-	Nonce            string             `json:"nonce"`
+	Nonce            string             `json:"Nonce"`
 	Sha3Uncles       string             `json:"sha3Uncles"`
 	LogsBloom        string             `json:"logsBloom"`
 	TransactionsRoot string             `json:"transactionsRoot"`
@@ -278,7 +278,7 @@ type proxyBlockWithTransactions struct {
 	TotalDifficulty  hexBig             `json:"totalDifficulty"`
 	ExtraData        string             `json:"extraData"`
 	Size             hexInt             `json:"size"`
-	GasLimit         hexInt             `json:"gasLimit"`
+	GasLimit         hexInt             `json:"GasLimit"`
 	GasUsed          hexInt             `json:"gasUsed"`
 	Timestamp        hexInt             `json:"timestamp"`
 	Uncles           []string           `json:"uncles"`
@@ -293,7 +293,7 @@ type proxyBlockWithoutTransactions struct {
 	Number           hexInt   `json:"number"`
 	Hash             string   `json:"hash"`
 	ParentHash       string   `json:"parentHash"`
-	Nonce            string   `json:"nonce"`
+	Nonce            string   `json:"Nonce"`
 	Sha3Uncles       string   `json:"sha3Uncles"`
 	LogsBloom        string   `json:"logsBloom"`
 	TransactionsRoot string   `json:"transactionsRoot"`
@@ -303,7 +303,7 @@ type proxyBlockWithoutTransactions struct {
 	TotalDifficulty  hexBig   `json:"totalDifficulty"`
 	ExtraData        string   `json:"extraData"`
 	Size             hexInt   `json:"size"`
-	GasLimit         hexInt   `json:"gasLimit"`
+	GasLimit         hexInt   `json:"GasLimit"`
 	GasUsed          hexInt   `json:"gasUsed"`
 	Timestamp        hexInt   `json:"timestamp"`
 	Uncles           []string `json:"uncles"`

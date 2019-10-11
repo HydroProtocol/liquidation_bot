@@ -510,10 +510,10 @@ func (s *EthRPCTestSuite) TestSendTransaction() {
 			"from": "0x3cc1a3c082944b9dba70e490e481dd56",
 			"to": "0x1bf21cb1dc384d019a885a06973f7308",
 			"gas": "0x6144",
-			"gasPrice": "0x12a05f200",
+			"GasPrice": "0x12a05f200",
 			"value": "0xde0b6b3a7640000",
 			"data": "some data",
-			"nonce": "0x18050"
+			"Nonce": "0x18050"
 		}]`)
 	})
 
@@ -570,13 +570,13 @@ func (s *EthRPCTestSuite) TestGetBlock() {
 	result := ` {
         "difficulty": "0x81299d4dbde29",
         "extraData": "0x706f6f6c2e65746866616e732e6f726720284d4e323729",
-        "gasLimit": "0x667900",
+        "GasLimit": "0x667900",
         "gasUsed": "0x639fa0",
         "hash": "0x2bdda43f649c564642101fc990f569dd855e60f88bf83e931f509a92c62700f9",
         "logsBloom": "0x111",
         "miner": "0x1e9939daaad6924ad004c2560e90804164900341",
         "mixHash": "0xa6b69fa82eaea8674236170a2d8ea41d80c176315a579138b718f3bcaa4c39ab",
-        "nonce": "0xefd7ef000d0b78b8",
+        "Nonce": "0xefd7ef000d0b78b8",
         "number": "0x4055d5",
         "parentHash": "0x913f938dcb4ff83b2b6b42a0cf6517d438a3ce95174e9342c780fd20c84dfd03",
         "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
@@ -590,10 +590,10 @@ func (s *EthRPCTestSuite) TestGetBlock() {
 				"blockNumber": "0x4055d5",
 				"from": "0xa95350d70b18fa29f6b5eb8d627ceeeee499340d",
 				"gas": "0x5208",
-				"gasPrice": "0x6edf2a079e",
+				"GasPrice": "0x6edf2a079e",
 				"hash": "0xf519ca0e9ceeb0405dfeb95544179f557e3221213f07e33709af7ced60ab61b9",
 				"input": "0x",
-				"nonce": "0x289b",
+				"Nonce": "0x289b",
 				"to": "0xb595f3390fcec074237c8264b908fc73d4aedc93",
 				"transactionIndex": "0x0",
 				"value": "0xdbd2fc137a30000"
@@ -603,10 +603,10 @@ func (s *EthRPCTestSuite) TestGetBlock() {
 				"blockNumber": "0x4055d5",
 				"from": "0x0f1b76410215ed963ea2c3d3eaddd4a56350b422",
 				"gas": "0x3d090",
-				"gasPrice": "0x1176592e00",
+				"GasPrice": "0x1176592e00",
 				"hash": "0xa72743a3608e2ae7b3d1cc1f0e3ceed9a1c78d803eba5f28d5d6908adfaa211c",
 				"input": "0x278b8c0e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004551ce090d138000000000000000000000000000006bea43baa3f7a6f765f14f10a1a1b08334ef4500000000000000000000000000000000000000000000003627e8f712373c000000000000000000000000000000000000000000000000000000000000004059b200000000000000000000000000000000000000000000000000000000418e8e7d000000000000000000000000000000000000000000000000000000000000001b64b1fee882b69969c9395a095e45e4b0abb3b19806ba040a6765194f966ae64e24a3d44a837de95e014b6b0f7eea075e30cca0414a18c0a27a7f349271689f3d",
-				"nonce": "0x1c2",
+				"Nonce": "0x1c2",
 				"to": "0x8d12a197cb00d4747a1fe03395095ce2a5cc6819",
 				"transactionIndex": "0x1",
 				"value": "0x0"
@@ -675,13 +675,13 @@ func (s *EthRPCTestSuite) TestGetBlock() {
 	result = `{
 		"difficulty": "0x7feab8ef4d978",
 		"extraData": "0xd58301050b8650617269747986312e31352e31826c69",
-		"gasLimit": "0x665f6b",
+		"GasLimit": "0x665f6b",
 		"gasUsed": "0x1d71b",
 		"hash": "0x23be1464d0e805fe3cec49039a9cf7fae7c09d2efacbed2abb10ef7ddae960ab",
 		"logsBloom": "0x222",
 		"miner": "0x6a7a43be33ba930fe58f34e07d0ad6ba7adb9b1f",
 		"mixHash": "0xa8f339af405f7f3a7b7c163f8889f44343abfbbeda13c41e06923de349ea6483",
-		"nonce": "0x19a48ee424b5088f",
+		"Nonce": "0x19a48ee424b5088f",
 		"number": "0x4105f3",
 		"parentHash": "0xbc3e37984a619008d75e7f73865247fb420ae5ed2c921599d099ab5f20519396",
 		"receiptsRoot": "0xa1384524d42ff86fdf4e44eeea853aba4e772a52240037cbfddc22782bad017e",
@@ -893,10 +893,10 @@ func (s *EthRPCTestSuite) TestGetTransaction() {
         "blockNumber": "0x4109ed",
         "from": "0xe3a7ca9d2306b0dc900ea618648bed9ec6cb1106",
         "gas": "0x3d090",
-        "gasPrice": "0xee6b2800",
+        "GasPrice": "0xee6b2800",
         "hash": "0x3068bb24a6c65a80eb350b89b2ef2f4d0605f59e5d07fd3467eb76511c4408e7",
         "input": "0x522",
-        "nonce": "0xa8",
+        "Nonce": "0xa8",
         "to": "0x8d12a197cb00d4747a1fe03395095ce2a5cc6819",
         "transactionIndex": "0x98",
         "value": "0x9184e72a000"

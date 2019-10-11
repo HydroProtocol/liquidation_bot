@@ -18,9 +18,9 @@ import (
 )
 
 type SimpleOrder struct {
-	Amount          decimal.Decimal
-	Price           decimal.Decimal
-	Side 			string
+	Amount decimal.Decimal
+	Price  decimal.Decimal
+	Side   string
 }
 
 type OrderRes struct {
@@ -66,23 +66,23 @@ type DdexClient struct {
 }
 
 func NewDdexClient(privateKey string, baseTokenSymbol string, quoteTokenSymbol string) (client *DdexClient, err error) {
-	ethereumNodeUrl:=os.Getenv("ETHEREUM_NODE_URL")
-	ddexBaseUrl :=os.Getenv("DDEX_URL")
-	hydroContractAddress:=os.Getenv("HYDRO_CONTRACT_ADDRESS")
+	ethereumNodeUrl := os.Getenv("ETHEREUM_NODE_URL")
+	ddexBaseUrl := os.Getenv("DDEX_URL")
+	hydroContractAddress := os.Getenv("HYDRO_CONTRACT_ADDRESS")
 
-	web3:=web3.NewWeb3(ethereumNodeUrl)
-	address,err:=web3.AddPrivateKey(privateKey)
-	if err!=nil {
+	web3 := web3.NewWeb3(ethereumNodeUrl)
+	address, err := web3.AddPrivateKey(privateKey)
+	if err != nil {
 		return
 	}
-	contract,err:=web3.NewContract(utils.HydroAbi, hydroContractAddress)
-	if err!=nil {
+	contract, err := web3.NewContract(utils.HydroAbi, hydroContractAddress)
+	if err != nil {
 		return
 	}
 	// get market meta data
 	var dataContainer IDdexMarkets
 	resp, err := utils.Get(
-		utils.JoinUrlPath(ddexBaseUrl,fmt.Sprintf("markets/%s-%s", baseTokenSymbol, quoteTokenSymbol)),
+		utils.JoinUrlPath(ddexBaseUrl, fmt.Sprintf("markets/%s-%s", baseTokenSymbol, quoteTokenSymbol)),
 		"",
 		utils.EmptyKeyPairList,
 		[]utils.KeyPair{{"Content-Type", "application/json"}})
@@ -102,7 +102,7 @@ func NewDdexClient(privateKey string, baseTokenSymbol string, quoteTokenSymbol s
 		"",
 		0,
 		address,
-		fmt.Sprintf("%s-%s",baseTokenSymbol, quoteTokenSymbol),
+		fmt.Sprintf("%s-%s", baseTokenSymbol, quoteTokenSymbol),
 		quoteTokenSymbol,
 		dataContainer.Data.Market.QuoteAssetAddress,
 		dataContainer.Data.Market.QuoteAssetDecimals,
@@ -121,21 +121,21 @@ func NewDdexClient(privateKey string, baseTokenSymbol string, quoteTokenSymbol s
 
 func (client *DdexClient) updateSignCache() {
 	now := utils.MillisecondTimestamp()
-	if client.lastSignTime<now-200000 {
-		messageStr := "HYDRO-AUTHENTICATION@"+strconv.Itoa(int(now))
-		signRes,_:=utils.PersonalSign([]byte(messageStr),client.privateKey)
+	if client.lastSignTime < now-200000 {
+		messageStr := "HYDRO-AUTHENTICATION@" + strconv.Itoa(int(now))
+		signRes, _ := utils.PersonalSign([]byte(messageStr), client.privateKey)
 		client.signCache = fmt.Sprintf("%s#%s#0x%x", strings.ToLower(client.address), messageStr, signRes)
 		client.lastSignTime = now
 	}
 }
 
-func (client *DdexClient) signOrderId(orderId string)string{
+func (client *DdexClient) signOrderId(orderId string) string {
 	if strings.HasPrefix(orderId, "0x") {
 		orderId = orderId[2:]
 	}
-	orderIdHex,_:=hex.DecodeString(orderId)
-	signature,_:=utils.PersonalSign(orderIdHex, client.privateKey)
-	return "0x"+hex.EncodeToString(signature)
+	orderIdHex, _ := hex.DecodeString(orderId)
+	signature, _ := utils.PersonalSign(orderIdHex, client.privateKey)
+	return "0x" + hex.EncodeToString(signature)
 }
 
 func (client *DdexClient) get(path string, params []utils.KeyPair) (string, error) {
@@ -228,6 +228,27 @@ func (client *DdexClient) placeOrder(orderId string) bool {
 	}
 }
 
+func (client *DdexClient) placeOrderSynchronously(orderId string) (res *OrderRes, err error) {
+	var body = struct {
+		OrderId   string `json:"orderId"`
+		Signature string `json:"signature"`
+	}{orderId, client.signOrderId(orderId)}
+	bodyBytes, _ := json.Marshal(body)
+	resp, err := client.post("orders/sync", string(bodyBytes), utils.EmptyKeyPairList)
+	if err != nil {
+		return
+	}
+	var dataContainer IPlaceOrderSync
+	json.Unmarshal([]byte(resp), &dataContainer)
+	if dataContainer.Desc != "success" {
+		err = errors.New(dataContainer.Desc)
+		return
+	} else {
+		res = client.parseDdexOrderResp(dataContainer.Data.Order)
+		return
+	}
+}
+
 func (client *DdexClient) CreateLimitOrder(
 	price decimal.Decimal,
 	amount decimal.Decimal,
@@ -253,6 +274,25 @@ func (client *DdexClient) CreateLimitOrder(
 	} else {
 		return "", errors.New(fmt.Sprintf("ddex client %s place order failed", client.tradingPair))
 	}
+}
+
+func (client *DdexClient) CreateMarketOrder(
+	priceLimit decimal.Decimal,
+	amount decimal.Decimal,
+	side string,
+) (res *OrderRes, err error) {
+
+	validPrice := utils.SetDecimal(utils.SetPrecision(priceLimit, client.pricePrecision), client.priceDecimal)
+	if side == utils.SELL {
+		amount = utils.SetDecimal(amount, client.amountDecimal)
+	}
+
+	orderId, err := client.buildUnsignedOrder(validPrice, amount, side, "market", false, 3600)
+	if err != nil {
+		return
+	}
+	res, err = client.placeOrderSynchronously(orderId)
+	return
 }
 
 func (client *DdexClient) CancelOrder(orderId string) error {
@@ -329,7 +369,7 @@ func (client *DdexClient) GetOrder(orderId string) (res *OrderRes, err error) {
 		err = errors.New(dataContainer.Desc)
 		return
 	} else {
-		return client.parseDdexOrderResp(dataContainer.Data.Order),nil
+		return client.parseDdexOrderResp(dataContainer.Data.Order), nil
 	}
 }
 
@@ -409,10 +449,10 @@ func (client *DdexClient) GetInventory() (inventory *Inventory, err error) {
 	}
 
 	inventory = &Inventory{
-	Balance{
-		baseAmount.Sub(lockedBase),
-		lockedBase,
-		baseAmount,
+		Balance{
+			baseAmount.Sub(lockedBase),
+			lockedBase,
+			baseAmount,
 		},
 		Balance{
 			quoteAmount.Sub(lockedQuote),

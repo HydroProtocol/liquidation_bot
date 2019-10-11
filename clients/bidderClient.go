@@ -6,20 +6,20 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"math/big"
 	"os"
 	"strings"
 )
 
-
 type Auction struct {
-	ID              int64
-	DebtAsset       string
-	CollateralAsset string
-	AvailableDebt        decimal.Decimal
-	AvailableCollateral  decimal.Decimal
-	Ratio           decimal.Decimal
-	Price           decimal.Decimal
-	Finished        bool
+	ID                  int64
+	DebtAsset           string
+	CollateralAsset     string
+	AvailableDebt       decimal.Decimal
+	AvailableCollateral decimal.Decimal
+	Ratio               decimal.Decimal
+	Price               decimal.Decimal
+	Finished            bool
 }
 
 type AuctionList []*Auction
@@ -39,24 +39,47 @@ func (l AuctionList) Swap(i, j int) {
 }
 
 type BidderClient struct {
-	web3 *web3.Web3
-	hydroContract *web3.Contract
+	web3             *web3.Web3
+	hydroContract    *web3.Contract
+	bidderPrivateKey string
+	bidderAddress    string
 }
 
-func NewBidderClient() (client *BidderClient, err error){
-	ethereumNodeUrl:=os.Getenv("ETHEREUM_NODE_URL")
-	hydroContractAddress:=os.Getenv("HYDRO_CONTRACT_ADDRESS")
+func NewBidderClient(bidderPrivateKey string) (client *BidderClient, err error) {
+	ethereumNodeUrl := os.Getenv("ETHEREUM_NODE_URL")
+	hydroContractAddress := os.Getenv("HYDRO_CONTRACT_ADDRESS")
 
-	web3:=web3.NewWeb3(ethereumNodeUrl)
-	contract,err:=web3.NewContract(utils.HydroAbi, hydroContractAddress)
-	if err!=nil {
+	web3 := web3.NewWeb3(ethereumNodeUrl)
+	bidderAddress, err := web3.AddPrivateKey(bidderPrivateKey)
+	if err != nil {
+		return
+	}
+	contract, err := web3.NewContract(utils.HydroAbi, hydroContractAddress)
+	if err != nil {
 		return
 	}
 	client = &BidderClient{
 		web3,
 		contract,
+		bidderPrivateKey,
+		bidderAddress,
 	}
 	return
+}
+
+// raw repay amount
+func (client *BidderClient) FillAuctioon(auctionoID int64, repayDebt decimal.Decimal, gasPrice int64) (txHash string, err error) {
+	nonce, err := client.web3.Rpc.EthGetTransactionCount(client.bidderAddress, "latest")
+	if err != nil {
+		return
+	}
+	sendTxParams := &web3.SendTxParams{
+		client.bidderAddress,
+		big.NewInt(500000),
+		big.NewInt(gasPrice),
+		uint64(nonce),
+	}
+	return client.hydroContract.Send(sendTxParams, big.NewInt(0), "fillAuctionWithAmount", uint32(auctionoID), big.NewInt(repayDebt.IntPart()))
 }
 
 // return raw amount
@@ -65,7 +88,7 @@ func (client *BidderClient) GetFillAuctionRes(txHash string) (bidderRepay decima
 	if err != nil {
 		return
 	}
-	if receipt.Status!="0x1" {
+	if receipt.Status != "0x1" {
 		return decimal.Zero, decimal.Zero, nil
 	}
 	for _, log := range receipt.Logs {
@@ -81,7 +104,7 @@ func (client *BidderClient) GetFillAuctionRes(txHash string) (bidderRepay decima
 }
 
 func (client *BidderClient) GetCurrentAuctionIDs() (auctionIDs []int64, err error) {
-	resp,err:=client.hydroContract.Call("getCurrentAuctions")
+	resp, err := client.hydroContract.Call("getCurrentAuctions")
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +117,8 @@ func (client *BidderClient) GetCurrentAuctionIDs() (auctionIDs []int64, err erro
 }
 
 func (client *BidderClient) GetSingleAuction(auctionID int64) (auction *Auction, err error) {
-	resp,err:=client.hydroContract.Call("getAuctionDetails", uint32(auctionID))
-	if err!=nil{
+	resp, err := client.hydroContract.Call("getAuctionDetails", uint32(auctionID))
+	if err != nil {
 		return
 	}
 
@@ -110,9 +133,9 @@ func (client *BidderClient) GetSingleAuction(auctionID int64) (auction *Auction,
 	availableCollateral := decimal.NewFromBigInt(utils.Hex2BigInt(resp[2+64*5:2+64*6]), 0)
 
 	ratio := decimal.NewFromBigInt(utils.Hex2BigInt(resp[2+64*6:2+64*7]), -18)
-	finished := utils.Hex2BigInt(resp[2+64*8:2+64*9]).Uint64()==1
+	finished := utils.Hex2BigInt(resp[2+64*8:2+64*9]).Uint64() == 1
 
-	if ratio.LessThan(decimal.New(1,0)){
+	if ratio.LessThan(decimal.New(1, 0)) {
 		availableCollateral = availableCollateral.Mul(ratio)
 	} else {
 		availableDetb = availableDetb.Div(ratio)
@@ -139,3 +162,17 @@ func (client *BidderClient) GetSingleAuction(auctionID int64) (auction *Auction,
 	return auction, nil
 }
 
+func (client *BidderClient) GetAllAuctions() (auctions []*Auction, err error) {
+	auctionIDs, err := client.GetCurrentAuctionIDs()
+	if err != nil {
+		return
+	}
+	auctions = []*Auction{}
+	for _, auctionID := range auctionIDs {
+		auction, err := client.GetSingleAuction(auctionID)
+		if err == nil {
+			auctions = append(auctions, auction)
+		}
+	}
+	return auctions, nil
+}
