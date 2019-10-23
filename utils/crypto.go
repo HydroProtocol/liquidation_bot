@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"golang.org/x/crypto/sha3"
 	"math/big"
+	"strings"
 )
 
 var bitCurve = btcec.S256()
@@ -48,7 +49,7 @@ func NewPrivateKey(privateKeyBytes []byte) (*ecdsa.PrivateKey, error) {
 }
 
 func NewPrivateKeyByHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
-	privateKeyBytes := Hex2Bytes(privateKeyHex)
+	privateKeyBytes := HexString2Bytes(privateKeyHex)
 	return NewPrivateKey(privateKeyBytes)
 }
 
@@ -126,7 +127,7 @@ func PersonalEcRecover(data []byte, sig []byte) (string, error) {
 		return "", errors.New("")
 	}
 	pubBytes := elliptic.Marshal(bitCurve, rpk.X, rpk.Y)
-	return Bytes2Hex(Keccak256(pubBytes[1:])[12:]), nil
+	return strings.TrimPrefix(Bytes2HexString(Keccak256(pubBytes[1:])[12:]), "0x"), nil
 }
 
 func hashPersonalMessage(data []byte) []byte {
@@ -143,7 +144,7 @@ func PubKey2Bytes(pub *ecdsa.PublicKey) []byte {
 
 func PubKey2Address(p ecdsa.PublicKey) string {
 	pubBytes := PubKey2Bytes(&p)
-	return Bytes2HexP(Keccak256(pubBytes[1:])[12:])
+	return Bytes2HexString(Keccak256(pubBytes[1:])[12:])
 }
 
 func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {

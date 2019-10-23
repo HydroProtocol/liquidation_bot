@@ -19,46 +19,36 @@ type KeyPair struct {
 }
 
 var EmptyKeyPairList = []KeyPair{}
-var HttpClient *http.Client
-var HttpClientWithProxy *http.Client
+var _HttpClient *http.Client
 
 func init() {
-
-	var transport *http.Transport
-	transport = &http.Transport{
-		MaxIdleConns:    10,
-		IdleConnTimeout: 15 * time.Second,
-	}
-	HttpClient = &http.Client{
-		Transport: transport,
-		Timeout:   10 * time.Second,
-	}
 
 	// e.g PROXY http://115.215.71.12:808
 	if os.Getenv("PROXY") != "" {
 		proxy, _ := url.Parse(os.Getenv("PROXY"))
-		transportWithProxy := &http.Transport{
+		transport := &http.Transport{
 			Proxy:           http.ProxyURL(proxy),
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			MaxIdleConns:    10,
 			IdleConnTimeout: 15 * time.Second,
 		}
-		HttpClientWithProxy = &http.Client{
-			Transport: transportWithProxy,
+		_HttpClient = &http.Client{
+			Transport: transport,
 			Timeout:   10 * time.Second,
 		}
 	} else {
-		HttpClientWithProxy = HttpClient
+		transport := &http.Transport{
+			MaxIdleConns:    10,
+			IdleConnTimeout: 15 * time.Second,
+		}
+		_HttpClient = &http.Client{
+			Transport: transport,
+			Timeout:   10 * time.Second,
+		}
 	}
 }
 
-func callHttp(methodType string, url string, requestBody string, params []KeyPair, headers []KeyPair, useProxy bool) (string, error) {
-	var client *http.Client
-	if useProxy {
-		client = HttpClientWithProxy
-	} else {
-		client = HttpClient
-	}
+func callHttp(methodType string, url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
 
 	var body string
 	var errorCatch error
@@ -85,7 +75,7 @@ func callHttp(methodType string, url string, requestBody string, params []KeyPai
 		for _, header := range headers {
 			req.Header.Set(header.Key, header.Value)
 		}
-		resp, err := client.Do(req)
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			errorCatch = err
 		} else {
@@ -101,27 +91,15 @@ func callHttp(methodType string, url string, requestBody string, params []KeyPai
 }
 
 func Post(url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
-	return callHttp("POST", url, requestBody, params, headers, false)
+	return callHttp("POST", url, requestBody, params, headers)
 }
 
 func Get(url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
-	return callHttp("GET", url, requestBody, params, headers, false)
+	return callHttp("GET", url, requestBody, params, headers)
 }
 
 func Delete(url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
-	return callHttp("DELETE", url, requestBody, params, headers, false)
-}
-
-func PostWithProxy(url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
-	return callHttp("POST", url, requestBody, params, headers, true)
-}
-
-func GetWithProxy(url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
-	return callHttp("GET", url, requestBody, params, headers, true)
-}
-
-func DeleteWithProxy(url string, requestBody string, params []KeyPair, headers []KeyPair) (string, error) {
-	return callHttp("DELETE", url, requestBody, params, headers, true)
+	return callHttp("DELETE", url, requestBody, params, headers)
 }
 
 func closeBody(resp *http.Response) {

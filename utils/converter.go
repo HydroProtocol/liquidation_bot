@@ -9,9 +9,11 @@ import (
 	"strings"
 )
 
-// ParseInt parse hex string value to int
-func ParseInt(value string) (int, error) {
-	i, err := strconv.ParseInt(strings.TrimPrefix(value, "0x"), 16, 64)
+// hex string <-> int
+
+func HexString2Int(str string) (int, error) {
+	str = strings.ToLower(str)
+	i, err := strconv.ParseInt(strings.TrimPrefix(str, "0x"), 16, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -19,21 +21,20 @@ func ParseInt(value string) (int, error) {
 	return int(i), nil
 }
 
-// ParseBigInt parse hex string value to big.Int
-func ParseBigInt(value string) (big.Int, error) {
+func Int2HexString(i int) string {
+	return fmt.Sprintf("0x%x", i)
+}
+
+// hex string <-> big int
+
+func HexString2BigInt(str string) (big.Int, error) {
 	i := big.Int{}
-	_, err := fmt.Sscan(value, &i)
+	_, err := fmt.Sscan("0x"+strings.TrimPrefix(strings.ToLower(str), "0x"), &i)
 
 	return i, err
 }
 
-// IntToHex convert int to hexadecimal representation
-func IntToHex(i int) string {
-	return fmt.Sprintf("0x%x", i)
-}
-
-// BigToHex covert big.Int to hexadecimal representation
-func BigToHex(bigInt big.Int) string {
+func BigIntToHexString(bigInt big.Int) string {
 	if bigInt.BitLen() == 0 {
 		return "0x0"
 	}
@@ -41,89 +42,39 @@ func BigToHex(bigInt big.Int) string {
 	return "0x" + strings.TrimPrefix(fmt.Sprintf("%x", bigInt.Bytes()), "0")
 }
 
-func Int2Hex(number uint64) string {
-	return fmt.Sprintf("%x", number)
+// hex string -> decimal
+
+func HexString2Decimal(str string, exp int32) decimal.Decimal {
+	i, _ := HexString2BigInt(str)
+	return decimal.NewFromBigInt(&i, exp)
 }
 
-// just return uint64 type
-func Hex2Int(hex string) uint64 {
-	if strings.HasPrefix(hex, "0x") || strings.HasPrefix(hex, "0X") {
-		hex = hex[2:]
-	}
-	intNumber, err := strconv.ParseUint(hex, 16, 64)
-
-	if err != nil {
-		return 0
-	}
-
-	return uint64(intNumber)
+func String2Decimal(str string) decimal.Decimal {
+	d, _ := decimal.NewFromString(str)
+	return d
 }
 
-func Bytes2Hex(bytes []byte) string {
-	return hex.EncodeToString(bytes)
+// bytes <-> hex string
+
+func Bytes2HexString(bytes []byte) string {
+	return "0x" + hex.EncodeToString(bytes)
 }
 
-func Hex2Bytes(str string) []byte {
-	if strings.HasPrefix(str, "0x") || strings.HasPrefix(str, "0X") {
-		str = str[2:]
-	}
+func HexString2Bytes(str string) []byte {
+	str = strings.TrimPrefix(strings.ToLower(str), "0x")
 
 	if len(str)%2 == 1 {
 		str = "0" + str
 	}
 
-	h, _ := hex.DecodeString(str)
-	return h
-}
-
-// with prefix '0x'
-func Bytes2HexP(bytes []byte) string {
-	return "0x" + hex.EncodeToString(bytes)
-}
-
-func Hex2BigInt(str string) *big.Int {
-	bytes := Hex2Bytes(str)
-	b := big.NewInt(0)
-	b.SetBytes(bytes)
+	b, _ := hex.DecodeString(str)
 	return b
 }
 
-func Bytes2BigInt(bytes []byte) *big.Int {
-	b := big.NewInt(0)
-	b.SetBytes(bytes)
-	return b
-}
-
-// RightPadBytes zero-pads slice to the right up to length l.
-func RightPadBytes(slice []byte, l int) []byte {
-	if l <= len(slice) {
-		return slice
-	}
-
-	padded := make([]byte, l)
-	copy(padded, slice)
-
-	return padded
-}
-
-// LeftPadBytes zero-pads slice to the left up to length l.
-func LeftPadBytes(slice []byte, l int) []byte {
-	if l <= len(slice) {
-		return slice
-	}
-
-	padded := make([]byte, l)
-	copy(padded[l-len(slice):], slice)
-
-	return padded
-}
-
-func Int2Bytes(i uint64) []byte {
-	return Hex2Bytes(Int2Hex(i))
-}
+// decimal <-> big int
 
 func DecimalToBigInt(d decimal.Decimal) *big.Int {
 	n := new(big.Int)
-	n, _ = n.SetString(d.String(), 0)
+	n, _ = n.SetString(d.Floor().String(), 0)
 	return n
 }

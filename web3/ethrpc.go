@@ -1,4 +1,5 @@
 package web3
+
 // 6b8e9c0e9a8ffd2154cd4470a6ffb4919885e788
 
 import (
@@ -170,7 +171,7 @@ func (rpc *EthRPC) NetPeerCount() (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthProtocolVersion returns the current ethereum protocol version.
@@ -219,7 +220,7 @@ func (rpc *EthRPC) EthHashrate() (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGasPrice returns the current price per gas in wei.
@@ -229,7 +230,7 @@ func (rpc *EthRPC) EthGasPrice() (big.Int, error) {
 		return big.Int{}, err
 	}
 
-	return utils.ParseBigInt(response)
+	return utils.HexString2BigInt(response)
 }
 
 // EthAccounts returns a list of addresses owned by client.
@@ -247,7 +248,7 @@ func (rpc *EthRPC) EthBlockNumber() (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGetBalance returns the balance of the account of given address in wei.
@@ -257,14 +258,14 @@ func (rpc *EthRPC) EthGetBalance(address, block string) (big.Int, error) {
 		return big.Int{}, err
 	}
 
-	return utils.ParseBigInt(response)
+	return utils.HexString2BigInt(response)
 }
 
 // EthGetStorageAt returns the value from a storage position at a given address.
 func (rpc *EthRPC) EthGetStorageAt(data string, position int, tag string) (string, error) {
 	var result string
 
-	err := rpc.call("eth_getStorageAt", &result, data, utils.IntToHex(position), tag)
+	err := rpc.call("eth_getStorageAt", &result, data, utils.Int2HexString(position), tag)
 	return result, err
 }
 
@@ -276,7 +277,7 @@ func (rpc *EthRPC) EthGetTransactionCount(address, block string) (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGetBlockTransactionCountByHash returns the number of transactions in a block from a block matching the given block hash.
@@ -287,18 +288,18 @@ func (rpc *EthRPC) EthGetBlockTransactionCountByHash(hash string) (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGetBlockTransactionCountByNumber returns the number of transactions in a block from a block matching the given block
 func (rpc *EthRPC) EthGetBlockTransactionCountByNumber(number int) (int, error) {
 	var response string
 
-	if err := rpc.call("eth_getBlockTransactionCountByNumber", &response, utils.IntToHex(number)); err != nil {
+	if err := rpc.call("eth_getBlockTransactionCountByNumber", &response, utils.Int2HexString(number)); err != nil {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGetUncleCountByBlockHash returns the number of uncles in a block from a block matching the given block hash.
@@ -309,18 +310,18 @@ func (rpc *EthRPC) EthGetUncleCountByBlockHash(hash string) (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGetUncleCountByBlockNumber returns the number of uncles in a block from a block matching the given block number.
 func (rpc *EthRPC) EthGetUncleCountByBlockNumber(number int) (int, error) {
 	var response string
 
-	if err := rpc.call("eth_getUncleCountByBlockNumber", &response, utils.IntToHex(number)); err != nil {
+	if err := rpc.call("eth_getUncleCountByBlockNumber", &response, utils.Int2HexString(number)); err != nil {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 // EthGetCode returns code at a given address.
@@ -373,7 +374,7 @@ func (rpc *EthRPC) EthEstimateGas(transaction T) (int, error) {
 		return 0, err
 	}
 
-	return utils.ParseInt(response)
+	return utils.HexString2Int(response)
 }
 
 func (rpc *EthRPC) getBlock(method string, withTransactions bool, params ...interface{}) (*Block, error) {
@@ -408,7 +409,7 @@ func (rpc *EthRPC) EthGetBlockByHash(hash string, withTransactions bool) (*Block
 
 // EthGetBlockByNumber returns information about a block by block number.
 func (rpc *EthRPC) EthGetBlockByNumber(number int, withTransactions bool) (*Block, error) {
-	return rpc.getBlock("eth_getBlockByNumber", withTransactions, utils.IntToHex(number), withTransactions)
+	return rpc.getBlock("eth_getBlockByNumber", withTransactions, utils.Int2HexString(number), withTransactions)
 }
 
 func (rpc *EthRPC) getTransaction(method string, params ...interface{}) (*Transaction, error) {
@@ -425,12 +426,12 @@ func (rpc *EthRPC) EthGetTransactionByHash(hash string) (*Transaction, error) {
 
 // EthGetTransactionByBlockHashAndIndex returns information about a transaction by block hash and transaction index position.
 func (rpc *EthRPC) EthGetTransactionByBlockHashAndIndex(blockHash string, transactionIndex int) (*Transaction, error) {
-	return rpc.getTransaction("eth_getTransactionByBlockHashAndIndex", blockHash, utils.IntToHex(transactionIndex))
+	return rpc.getTransaction("eth_getTransactionByBlockHashAndIndex", blockHash, utils.Int2HexString(transactionIndex))
 }
 
 // EthGetTransactionByBlockNumberAndIndex returns information about a transaction by block number and transaction index position.
 func (rpc *EthRPC) EthGetTransactionByBlockNumberAndIndex(blockNumber, transactionIndex int) (*Transaction, error) {
-	return rpc.getTransaction("eth_getTransactionByBlockNumberAndIndex", utils.IntToHex(blockNumber), utils.IntToHex(transactionIndex))
+	return rpc.getTransaction("eth_getTransactionByBlockNumberAndIndex", utils.Int2HexString(blockNumber), utils.Int2HexString(transactionIndex))
 }
 
 // EthGetTransactionReceipt returns the receipt of a transaction by transaction hash.

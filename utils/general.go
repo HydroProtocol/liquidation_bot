@@ -1,11 +1,8 @@
 package utils
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/shopspring/decimal"
-	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -18,9 +15,6 @@ func SetDecimal(d decimal.Decimal, decimalNum int) decimal.Decimal {
 }
 
 func SetPrecision(d decimal.Decimal, precision int) decimal.Decimal {
-	if precision <= 0 {
-		panic("precision must greater than 0")
-	}
 	numString := d.String()
 	precisionCount := 0
 	endPosition := 0
@@ -33,28 +27,12 @@ func SetPrecision(d decimal.Decimal, precision int) decimal.Decimal {
 		}
 		endPosition += 1
 	}
-	validDecimal, err := decimal.NewFromString(numString[:endPosition])
-	if err != nil {
-		panic("set precision failed")
-	}
+	validDecimal, _ := decimal.NewFromString(numString[:endPosition])
 	return validDecimal
 }
 
-func ToggleSide(side string) string {
-	if side == SELL {
-		return BUY
-	} else {
-		return SELL
-	}
+func IsAddressEqual(a string, b string) bool {
+	a = strings.TrimPrefix(strings.ToLower(a), "0x")
+	b = strings.TrimPrefix(strings.ToLower(b), "0x")
+	return a == b
 }
-
-func GetUniqueId() string {
-	timestamp := time.Now().String()
-	randomNum := rand.Intn(10000)
-	s := spew.Sprintf("%s@%d", timestamp, randomNum)
-	h := md5.New()
-	h.Write([]byte(s))
-	sha1Hash := hex.EncodeToString(h.Sum(nil))
-	return sha1Hash
-}
-

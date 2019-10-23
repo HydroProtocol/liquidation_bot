@@ -58,19 +58,19 @@ func (t T) MarshalJSON() ([]byte, error) {
 		params["to"] = t.To
 	}
 	if t.Gas > 0 {
-		params["gas"] = utils.IntToHex(t.Gas)
+		params["gas"] = utils.Int2HexString(t.Gas)
 	}
 	if t.GasPrice != nil {
-		params["GasPrice"] = utils.BigToHex(*t.GasPrice)
+		params["GasPrice"] = utils.BigIntToHexString(*t.GasPrice)
 	}
 	if t.Value != nil {
-		params["value"] = utils.BigToHex(*t.Value)
+		params["value"] = utils.BigIntToHexString(*t.Value)
 	}
 	if t.Data != "" {
 		params["data"] = t.Data
 	}
 	if t.Nonce > 0 {
-		params["Nonce"] = utils.IntToHex(t.Nonce)
+		params["Nonce"] = utils.Int2HexString(t.Nonce)
 	}
 
 	return json.Marshal(params)
@@ -245,7 +245,7 @@ type proxyTransactionReceipt struct {
 type hexInt int
 
 func (i *hexInt) UnmarshalJSON(data []byte) error {
-	result, err := utils.ParseInt(string(bytes.Trim(data, `"`)))
+	result, err := utils.HexString2Int(string(bytes.Trim(data, `"`)))
 	*i = hexInt(result)
 
 	return err
@@ -254,7 +254,7 @@ func (i *hexInt) UnmarshalJSON(data []byte) error {
 type hexBig big.Int
 
 func (i *hexBig) UnmarshalJSON(data []byte) error {
-	result, err := utils.ParseBigInt(string(bytes.Trim(data, `"`)))
+	result, err := utils.HexString2BigInt(string(bytes.Trim(data, `"`)))
 	*i = hexBig(result)
 
 	return err

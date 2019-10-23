@@ -2,7 +2,6 @@ package web3
 
 import (
 	"auctionBidder/utils"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +18,7 @@ type Web3 struct {
 
 func NewWeb3(ethereumNodeUrl string) *Web3 {
 	rpc := NewEthRPC(ethereumNodeUrl)
+
 	return &Web3{rpc, map[string]string{}}
 }
 
@@ -31,19 +31,6 @@ func (w *Web3) AddPrivateKey(privateKey string) (newAddress string, err error) {
 	w.privateKeyMap[strings.ToLower(newAddress)] = strings.ToLower(privateKey)
 
 	return
-}
-
-type SendTxParams struct {
-	FromAddress string
-	GasLimit    *big.Int
-	GasPrice    *big.Int
-	Nonce       uint64
-}
-
-type Contract struct {
-	web3    *Web3
-	abi     *abi.ABI
-	address *common.Address
 }
 
 func (w *Web3) NewBlockChannel() chan int64 {
@@ -60,18 +47,35 @@ func (w *Web3) NewBlockChannel() chan int64 {
 			}
 		}
 	}()
+
 	return c
 }
 
-func (w *Web3) NewContract(abiStr string, address string) (*Contract, error) {
+type SendTxParams struct {
+	FromAddress string
+	GasLimit    *big.Int
+	GasPrice    *big.Int
+	Nonce       uint64
+}
+
+type Contract struct {
+	web3    *Web3
+	abi     *abi.ABI
+	address *common.Address
+}
+
+func (w *Web3) NewContract(abiStr string, address string) (contract *Contract, err error) {
 	abi, err := abi.JSON(strings.NewReader(abiStr))
 	if err != nil {
-		return nil, err
+		return
 	}
+
 	commonAddress := common.HexToAddress(address)
-	return &Contract{
+	contract = &Contract{
 		w, &abi, &commonAddress,
-	}, nil
+	}
+
+	return
 }
 
 func (c *Contract) Call(functionName string, args ...interface{}) (resp string, err error) {
@@ -84,6 +88,7 @@ func (c *Contract) Call(functionName string, args ...interface{}) (resp string, 
 	if err != nil {
 		return
 	}
+
 	return c.web3.Rpc.EthCall(T{
 		To:   c.address.String(),
 		From: "0x0000000000000000000000000000000000000000",
@@ -94,7 +99,7 @@ func (c *Contract) Call(functionName string, args ...interface{}) (resp string, 
 
 func (c *Contract) Send(params *SendTxParams, amount *big.Int, functionName string, args ...interface{}) (resp string, err error) {
 	if _, ok := c.web3.privateKeyMap[strings.ToLower(params.FromAddress)]; !ok {
-		err = errors.New(fmt.Sprintf("from address %s not exist", params.FromAddress))
+		err = utils.AddressNotExist
 		return
 	}
 
@@ -111,14 +116,7 @@ func (c *Contract) Send(params *SendTxParams, amount *big.Int, functionName stri
 		params.GasPrice,
 		data,
 	)
+	rawData, _ := utils.SignTx(c.web3.privateKeyMap[strings.ToLower(params.FromAddress)], os.Getenv("CHAIN_ID"), tx)
 
-	chainID := os.Getenv("CHAIN_ID")
-	if len(chainID) == 0 {
-		panic("need env CHAIN_ID")
-	}
-	rawData, err := utils.SignTx(c.web3.privateKeyMap[strings.ToLower(params.FromAddress)], os.Getenv("CHAIN_ID"), tx)
-	if err != nil {
-		panic(err)
-	}
 	return c.web3.Rpc.EthSendRawTransaction(rawData)
 }

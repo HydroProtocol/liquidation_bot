@@ -1,27 +1,12 @@
-package clients
+package client
 
-type ITicker struct {
-	Status int    `json:"status"`
-	Desc   string `json:"desc"`
-	Data   struct {
-		Ticker struct {
-			MarketID  string `json:"marketId"`
-			Price     string `json:"price"`
-			Volume    string `json:"volume"`
-			Bid       string `json:"bid"`
-			Ask       string `json:"ask"`
-			Low       string `json:"low"`
-			High      string `json:"high"`
-			UpdatedAt int64  `json:"updatedAt"`
-		} `json:"ticker"`
-	} `json:"data"`
-}
-
-type IDdexMarkets struct {
-	Status int    `json:"status"`
-	Desc   string `json:"desc"`
-	Data   struct {
-		Market struct {
+type IMarkets struct {
+	Status   int         `json:"status"`
+	Desc     string      `json:"desc"`
+	Template string      `json:"template"`
+	Params   interface{} `json:"params"`
+	Data     struct {
+		Markets []struct {
 			ID                        string   `json:"id"`
 			MaxSlippage               string   `json:"maxSlippage"`
 			MarginMarketID            int      `json:"marginMarketId"`
@@ -54,11 +39,31 @@ type IDdexMarkets struct {
 			MaxLeverageRate           string   `json:"maxLeverageRate"`
 			WithdrawRate              string   `json:"withdrawRate"`
 			LiquidationRate           string   `json:"liquidationRate"`
-		} `json:"market"`
+		} `json:"markets"`
 	} `json:"data"`
 }
 
-type IDDEXOrderResp struct {
+type IAssets struct {
+	Status   int         `json:"status"`
+	Desc     string      `json:"desc"`
+	Template string      `json:"template"`
+	Params   interface{} `json:"params"`
+	Data     struct {
+		Assets []struct {
+			Address            string `json:"address"`
+			DisplayDecimals    int    `json:"displayDecimals"`
+			Symbol             string `json:"symbol"`
+			Name               string `json:"name"`
+			Decimals           int    `json:"decimals"`
+			OracleUSDPrice     string `json:"oracleUSDPrice"`
+			BorrowInterestRate string `json:"borrowInterestRate"`
+			SupplyInterestRate string `json:"supplyInterestRate"`
+			PoolTokenAddress   string `json:"poolTokenAddress"`
+		} `json:"assets"`
+	} `json:"data"`
+}
+
+type IOrderResp struct {
 	ID              string `json:"id"`
 	Type            string `json:"type"`
 	Version         string `json:"version"`
@@ -85,7 +90,7 @@ type ILockedBalance struct {
 	Desc   string `json:"desc"`
 	Data   struct {
 		LockedBalances []struct {
-			Address        string `json:"address"`
+			Address        string `json:"Address"`
 			Symbol         string `json:"symbol"`
 			AssetAddress   string `json:"assetAddress"`
 			WalletType     string `json:"walletType"`
@@ -99,7 +104,7 @@ type IOrder struct {
 	Status int    `json:"status"`
 	Desc   string `json:"desc"`
 	Data   struct {
-		Order IDDEXOrderResp `json:"order"`
+		Order IOrderResp `json:"order"`
 	} `json:"data"`
 }
 
@@ -107,10 +112,10 @@ type IAllPendingOrders struct {
 	Status int    `json:"status"`
 	Desc   string `json:"desc"`
 	Data   struct {
-		TotalCount  int              `json:"totalCount"`
-		TotalPages  int              `json:"totalPages"`
-		CurrentPage int              `json:"currentPage"`
-		Orders      []IDDEXOrderResp `json:"orders"`
+		TotalCount  int          `json:"totalCount"`
+		TotalPages  int          `json:"totalPages"`
+		CurrentPage int          `json:"currentPage"`
+		Orders      []IOrderResp `json:"orders"`
 	} `json:"data"`
 }
 
@@ -133,7 +138,7 @@ type IPlaceOrderSync struct {
 	Status int    `json:"status"`
 	Desc   string `json:"desc"`
 	Data   struct {
-		Order IDDEXOrderResp `json:"order"`
+		Order IOrderResp `json:"order"`
 	} `json:"data"`
 }
 
@@ -142,22 +147,7 @@ type ICancelOrder struct {
 	Desc   string `json:"desc"`
 }
 
-type IDDEXWsTradeEvent struct {
-	Type          string `json:"type"`
-	Time          int64  `json:"time"`
-	MarketID      string `json:"marketId"`
-	Sequence      int    `json:"sequence"`
-	Price         string `json:"price"`
-	TransactionID string `json:"transactionId"`
-	MakerOrderID  string `json:"makerOrderId"`
-	TakerOrderID  string `json:"takerOrderId"`
-	Taker         string `json:"taker"`
-	Maker         string `json:"maker"`
-	Amount        string `json:"amount"`
-	MakerSide     string `json:"makerSide"`
-}
-
-type ILevel1Orderbook struct {
+type IOrderbook struct {
 	Status int    `json:"status"`
 	Desc   string `json:"desc"`
 	Data   struct {
