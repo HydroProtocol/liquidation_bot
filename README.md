@@ -4,7 +4,7 @@ Participate in the liquidation on ddex to earn money 💰💰💰
 
 ## Getting Started
 
-Margin position will be liquidated if the collateral rate too low. 
+Margin positions will be liquidated if the collateral rate too low. 
 When a liquidation occurs, the borrowers' assets are sold off in a form of a dutch auction to repay the loan. 
 This bot help you bid the auction when profitable.
 
@@ -17,13 +17,13 @@ The bot uses an arbitrage strategy: Sell collateral on DDEX immediately after re
 
 ### Prerequisites
 
+You need to prepare some asset(e.g. ETH, USDT, DAI) in your DDEX spot trading balance. 
+
 In order to run this container you'll need docker installed.
 
 * [Windows](https://docs.docker.com/windows/started)
 * [OS X](https://docs.docker.com/mac/started/)
 * [Linux](https://docs.docker.com/linux/started/)
-
-You need to prepare some asset(e.g. ETH, USDT, DAI) in your DDEX spot trading balance. 
 
 ### Run Container
 
@@ -41,7 +41,7 @@ docker run -it -v /your/file/path:/workingDir --name=auctionBidder --env NETWORK
 
 * `/your/file/path` - Where liquidation history, config and logs stored
 
-#### Useful File Locations
+##### Useful File Locations
 
 * `/your/file/path/auctionBidderSqlite` - Your bid history
   
@@ -51,7 +51,7 @@ docker run -it -v /your/file/path:/workingDir --name=auctionBidder --env NETWORK
 
 #### Parameters
 
-The bot will ask for the following parameters for the first time and stored them at `/your/file/path/config.json`. Edit this file to adjust bot parameters.
+The bot will ask for the following parameters for the first run:
 
 * `PRIVATE_KEY` - Private key of the account to join liquidation
 
@@ -66,6 +66,8 @@ The bot will ask for the following parameters for the first time and stored them
 * `GAS_PRICE_TIPS_IN_GWEI` - I would like to bid using gas price *FAST* from [ethgasstation](https://ethgasstation.info/). And, another *X* Gwei as tips. `e.g. 5`
 
 * `MAX_SLIPPAGE` - Don't arbitrage if the slippage greater than *X* `e.g. 0.05` (0.05 means 5% slippage) 
+
+Edit `/your/file/path/config.json` and restart bot to adjust parameters.
 
 ## Contributing
 
