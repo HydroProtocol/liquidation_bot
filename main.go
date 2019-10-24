@@ -46,7 +46,7 @@ func startBot() (bot *cli.BidderBot, err error) {
 	ethereumNodeUrl := os.Getenv("ETHEREUM_NODE_URL")
 	minOrderValueUSD, _ := decimal.NewFromString(os.Getenv("MIN_ORDER_VALUE_USD"))
 	gasPriceInGwei, _ := strconv.Atoi(os.Getenv("GAS_PRICE_TIPS_IN_GWEI"))
-	profitBuffer, _ := decimal.NewFromString(os.Getenv("PROFIT_BUFFER"))
+	profitMargin, _ := decimal.NewFromString(os.Getenv("PROFIT_MARGIN"))
 	markets := os.Getenv("MARKETS")
 
 	ddexClient, err := client.NewDdexClient(privateKey)
@@ -66,7 +66,7 @@ func startBot() (bot *cli.BidderBot, err error) {
 		minOrderValueUSD,
 		gasPriceInGwei,
 		markets,
-		profitBuffer,
+		profitMargin,
 	}
 
 	go bot.Run()
@@ -117,7 +117,7 @@ func checkEnv() (err error) {
 		"ETHEREUM_NODE_URL":      "https://mainnet.infura.io/v3/37851992caeb4289aa749112fe798621",
 		"MIN_AMOUNT_VALUE_USD":   "100",
 		"MARKETS":                "ETH-USDT,ETH-DAI",
-		"PROFIT_BUFFER":          "0.01",
+		"PROFIT_MARGIN":          "0.01",
 		"GAS_PRICE_TIPS_IN_GWEI": "5",
 	}
 	if os.Getenv("NETWORK") == "ropsten" {

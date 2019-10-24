@@ -18,7 +18,7 @@ type BidderBot struct {
 	MinOrderValueUSD decimal.Decimal
 	GasPriceTipsGwei int // send tx using gas price "fast" from ether gas station plus tips
 	Markets          string
-	ProfitBuffer     decimal.Decimal
+	ProfitMargin     decimal.Decimal
 }
 
 func (b *BidderBot) Run() {
@@ -80,7 +80,7 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 		return
 	}
 
-	if receive.LessThanOrEqual(debt.Add(debt.Mul(b.ProfitBuffer))) {
+	if receive.LessThanOrEqual(debt.Add(debt.Mul(b.ProfitMargin))) {
 		err = errors.Errorf("auction price not profitable, wait next block")
 		return
 	} else {
