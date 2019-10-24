@@ -41,6 +41,14 @@ docker run -it -v /your/file/path:/workingDir --name=auctionBidder --env NETWORK
 
 * `/your/file/path` - Where liquidation history, config and logs stored
 
+#### Useful File Locations
+
+* `/your/file/path/auctionBidderSqlite` - Your bid history
+  
+* `/your/file/path/config.json` - Bot parameters
+
+* `/your/file/path/log.%Y%m%D` - Logs
+
 #### Parameters
 
 The bot will ask for the following parameters for the first time and stored them at `/your/file/path/config.json`. Edit this file to adjust bot parameters.
@@ -49,68 +57,24 @@ The bot will ask for the following parameters for the first time and stored them
 
 * `ETHEREUM_NODE_URL` - Ethereum node url. Get a free node at [infura](https://infura.io).
 
-* `MARKETS` - Which markets' auction I am interested in. Separated by commas `ETH-USDT,ETH-DAI` 
+* `MARKETS` - Which markets' auction I am interested in. Separated by commas. `e.g. ETH-USDT,ETH-DAI` 
 	
-* `MIN_AMOUNT_VALUE_USD` - I don't want to participate the auction unless its USD value greater than MIN_AMOUNT_VALUE_USD
+* `MIN_AMOUNT_VALUE_USD` - I don't want to participate the auction unless its USD value greater than *X* `e.g. 100`
 
-* `PROFIT_BUFFER` - I don't want to bid unless the 
+* `PROFIT_MARGIN` - I don't want to bid unless the profit margin greater than *X* `e.g. 0.01`
 	
-* `MAX_SLIPPAGE` - 
-	
+* `GAS_PRICE_TIPS_IN_GWEI` - I would like to bid using gas price *FAST* from [ethgasstation](https://ethgasstation.info/). And, another *X* Gwei as tips. `e.g. 5`
 
-	
-* `GAS_PRICE_TIPS_IN_GWEI` -
-
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+* `MAX_SLIPPAGE` - Don't arbitrage if the slippage greater than *X* `e.g. 0.05` (0.05 means 5% slippage) 
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
-## Authors
-
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+1. Fork it (<https://github.com/hydroprotocol/liquidation_bot/fork>)
+2. Create your feature branch (`git checkout -b feature/fooBar`)
+3. Commit your changes (`git commit -am 'Add some fooBar'`)
+4. Push to the branch (`git push origin feature/fooBar`)
+5. Create a new Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+This project is licensed under the Apache-2.0 License - see the [LICENSE.txt](LICENSE.txt) file for details
