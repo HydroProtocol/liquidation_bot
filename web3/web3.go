@@ -2,6 +2,7 @@ package web3
 
 import (
 	"auctionBidder/utils"
+	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -119,4 +120,19 @@ func (c *Contract) Send(params *SendTxParams, amount *big.Int, functionName stri
 	rawData, _ := utils.SignTx(c.web3.privateKeyMap[strings.ToLower(params.FromAddress)], os.Getenv("CHAIN_ID"), tx)
 
 	return c.web3.Rpc.EthSendRawTransaction(rawData)
+}
+
+func GetGasPriceGwei() int64 {
+	resp, err := utils.Get("https://ethgasstation.info/json/ethgasAPI.json", "", utils.EmptyKeyPairList, utils.EmptyKeyPairList)
+	if err != nil {
+		return 30 // default 30gwei
+	}
+	var dataContainer struct {
+		Fast    float64 `json:"fast"`
+		Fastest float64 `json:"fastest"`
+		SafeLow float64 `json:"safeLow"`
+		Average float64 `json:"average"`
+	}
+	json.Unmarshal([]byte(resp), &dataContainer)
+	return int64(dataContainer.Fast / 10)
 }

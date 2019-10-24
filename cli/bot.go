@@ -3,7 +3,7 @@ package cli
 import (
 	"auctionBidder/client"
 	"auctionBidder/utils"
-	"encoding/json"
+	"auctionBidder/web3"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
@@ -85,7 +85,8 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 		return
 	} else {
 		logrus.Infof("auction price profitable!")
-		gasPriceInGwei := b.getGasPrice()
+		gasPriceInGwei := web3.GetGasPriceGwei() + int64(b.GasPriceTipsGwei)
+		logrus.Debugf("use gas price %d gwei", gasPriceInGwei)
 		txHash, err := b.BidderClient.FillAuctioon(auction, debt, gasPriceInGwei)
 		if err != nil {
 			return err
@@ -108,6 +109,7 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 			err = errors.New("bid transaction failed")
 			return err
 		}
+		// todo if hedge failed anyway, give a red alert
 		ddexOrderId, ddexSellCollateral, ddexReceiveDebt, err := b.DdexClient.PromisedMarketSellAsset(auction.TradingPair, auction.CollateralSymbol, collateralForBidder, b.MaxSlippage)
 		logrus.Infof("hedge at ddex market: sell %s%s receive %s%s",
 			ddexSellCollateral.String(),
@@ -135,21 +137,6 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 	}
 
 	return
-}
-
-func (b *BidderBot) getGasPrice() int64 {
-	resp, err := utils.Get("https://ethgasstation.info/json/ethgasAPI.json", "", utils.EmptyKeyPairList, utils.EmptyKeyPairList)
-	if err != nil {
-		return 40000000000 // default 40gwei
-	}
-	var dataContainer struct {
-		Fast    int `json:"fast"`
-		Fastest int `json:"fastest"`
-		SafeLow int `json:"safeLow"`
-		Average int `json:"average"`
-	}
-	json.Unmarshal([]byte(resp), &dataContainer)
-	return int64(dataContainer.Fast/10 + b.GasPriceTipsGwei)
 }
 
 func (b *BidderBot) updatePnlView() {

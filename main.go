@@ -6,6 +6,7 @@ import (
 	"auctionBidder/utils"
 	"auctionBidder/web3"
 	"encoding/json"
+	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
@@ -16,18 +17,20 @@ import (
 
 func main() {
 	var err error
-	defer spew.Dump(err)
-	err = loadEnv("./env.json")
-	if err != nil {
-		return
-	}
+	defer func() {
+		if err != nil {
+			spew.Dump(err)
+		}
+	}()
 
-	err = loadEnv(os.Getenv("CONFIGPATH"))
-	if err != nil {
-		return
-	}
+	setEnv()
 
 	err = checkEnv()
+	if err != nil {
+		return
+	}
+
+	err = utils.InitDb()
 	if err != nil {
 		return
 	}
@@ -37,11 +40,6 @@ func main() {
 }
 
 func startBot() (bot *cli.BidderBot, err error) {
-
-	err = utils.InitDb()
-	if err != nil {
-		return
-	}
 
 	privateKey := os.Getenv("PRIVATE_KEY")
 	maxSlippage, _ := decimal.NewFromString(os.Getenv("MAX_SLIPPAGE"))
@@ -79,6 +77,24 @@ func startBot() (bot *cli.BidderBot, err error) {
 	return
 }
 
+func setEnv() {
+	os.Setenv("CONFIGPATH", "/workingDir/config.json")
+	os.Setenv("SQLITEPATH", "/workingDir/auctionBidderSqlite")
+	os.Setenv("LOGPATH", "/workingDir")
+	os.Setenv("CHAIN_ID", "1")
+	os.Setenv("HYDRO_CONTRACT_ADDRESS", "0x241e82C79452F51fbfc89Fac6d912e021dB1a3B7")
+	os.Setenv("DDEX_URL", "https://api.ddex.io/v4")
+
+	// ropsten
+	if os.Getenv("NETWORK") == "ropsten" {
+		os.Setenv("CHAIN_ID", "3")
+		os.Setenv("HYDRO_CONTRACT_ADDRESS", "0x06898143DF04616a8A8F9614deb3B99Ba12b3096")
+		os.Setenv("DDEX_URL", "https://bfd-ropsten-59c1702d-api.intra.ddex.io/v4/")
+	}
+
+	loadEnv(os.Getenv("CONFIGPATH"))
+}
+
 func loadEnv(filePath string) (err error) {
 	jsonFile, err := os.Open(filePath)
 	defer jsonFile.Close()
@@ -95,31 +111,38 @@ func loadEnv(filePath string) (err error) {
 }
 
 func checkEnv() (err error) {
-	requiredEnv := []string{
-		"PRIVATE_KEY",
-		"MAX_SLIPPAGE",
-		"ETHEREUM_NODE_URL",
-		"CHAIN_ID",
-		"HYDRO_CONTRACT_ADDRESS",
-		"MIN_AMOUNT_VALUE_USD",
-		"DDEX_URL",
-		"MARKETS",
-		"PROFIT_BUFFER",
+	requiredEnvDefaultValue := map[string]string{
+		"PRIVATE_KEY":            "B7A0C9D2786FC4DD080EA5D619D36771AEB0C8C26C290AFD3451B92BA2B7BC2C",
+		"MAX_SLIPPAGE":           "0.05",
+		"ETHEREUM_NODE_URL":      "https://mainnet.infura.io/v3/37851992caeb4289aa749112fe798621",
+		"MIN_AMOUNT_VALUE_USD":   "100",
+		"MARKETS":                "ETH-USDT,ETH-DAI",
+		"PROFIT_BUFFER":          "0.01",
+		"GAS_PRICE_TIPS_IN_GWEI": "5",
 	}
-	for _, envName := range requiredEnv {
+	if os.Getenv("NETWORK") == "ropsten" {
+		requiredEnvDefaultValue["ETHEREUM_NODE_URL"] = "https://ropsten.infura.io/v3/37851992caeb4289aa749112fe798621"
+		requiredEnvDefaultValue["MARKETS"] = "ETH-USDT6,TETH-DAI"
+	}
+	for envName, defaultValue := range requiredEnvDefaultValue {
 		if os.Getenv(envName) == "" {
-			logrus.Panicf("environment variable %s missed", envName)
-			// fmt.Printf("Enter %s:", envName)
-			// var input string
-			// fmt.Scanln(&input)
-			// os.Setenv(envName, input)
+			fmt.Printf("Enter %s(default %s):", envName, defaultValue)
+			var input string
+			fmt.Scanln(&input)
+			if input == "" {
+				input = defaultValue
+			}
+			os.Setenv(envName, input)
 		}
+		requiredEnvDefaultValue[envName] = os.Getenv(envName)
 	}
-	return
-}
 
-func prepareAccount(web3Client *web3.Web3, tokenAddress string) (err error) {
-	// TODO AUTO APPROVE AND DEPOSIT
-	// BE AWARE OF USER SETTING WRONG HYDRO CONTRACT ADDRESS
+	f, err := os.OpenFile(os.Getenv("CONFIGPATH"), os.O_CREATE|os.O_WRONLY, 0600)
+	defer f.Close()
+	if err == nil {
+		envToWrite, _ := json.MarshalIndent(requiredEnvDefaultValue, "", "  ")
+		f.Write(envToWrite)
+	}
+
 	return
 }

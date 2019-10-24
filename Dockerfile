@@ -1,6 +1,6 @@
 # compile env
 FROM golang:1.12
-ENV GOPROXY=https://athens.i.ddex.io
+#ENV GOPROXY=https://athens.i.ddex.io
 
 WORKDIR /app
 COPY . /app
