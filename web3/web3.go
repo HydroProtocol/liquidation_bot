@@ -122,7 +122,7 @@ func (c *Contract) Send(params *SendTxParams, amount *big.Int, functionName stri
 	return c.web3.Rpc.EthSendRawTransaction(rawData)
 }
 
-func GetGasPriceGwei() int64 {
+func GetGasPriceGwei() (gasPriceInGwei int64) {
 	resp, err := utils.Get("https://ethgasstation.info/json/ethgasAPI.json", "", utils.EmptyKeyPairList, utils.EmptyKeyPairList)
 	if err != nil {
 		return 30 // default 30gwei
@@ -134,5 +134,9 @@ func GetGasPriceGwei() int64 {
 		Average float64 `json:"average"`
 	}
 	json.Unmarshal([]byte(resp), &dataContainer)
-	return int64(dataContainer.Fast / 10)
+	gasPriceInGwei = int64(dataContainer.Fast / 10)
+	if gasPriceInGwei > 300 {
+		gasPriceInGwei = 300
+	}
+	return
 }
