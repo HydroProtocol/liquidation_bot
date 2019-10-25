@@ -1,6 +1,6 @@
 # DDEX Liquidation Bot
 
-Participate in the liquidation on ddex to earn money 💰💰💰
+Participate in the liquidation on DDEX to earn money 💰💰💰
 
 ## Getting Started
 
@@ -28,13 +28,13 @@ In order to run this container you'll need docker installed.
 ### Run Container
 
 ```shell
-docker run -it -v /your/file/path:/workingDir --name=auctionBidder hydroprotocolio/liquidation_bot:latest /bin/main
+docker run -it --rm -v /your/file/path:/workingDir --name=auctionBidder hydroprotocolio/liquidation_bot:latest /bin/main
 ```
 
 If you want to test on ropsten
 
-```
-docker run -it -v /your/file/path:/workingDir --name=auctionBidder --env NETWORK=ropsten hydroprotocolio/liquidation_bot:latest /bin/main
+```shell
+docker run -it --rm -v /your/file/path:/workingDir --name=auctionBidder --env NETWORK=ropsten hydroprotocolio/liquidation_bot:latest /bin/main
 ```
 
 #### Volumes

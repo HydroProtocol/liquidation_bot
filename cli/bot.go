@@ -68,8 +68,11 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 
 	// amount must greater than min usd size
 	collateralPrice, err := b.DdexClient.GetAssetUSDPrice(auction.CollateralSymbol)
+	if err != nil {
+		return
+	}
 	collateralValue := collateral.Mul(collateralPrice)
-	if err == nil && collateral.Mul(collateralPrice).LessThanOrEqual(b.MinOrderValueUSD) {
+	if collateral.Mul(collateralPrice).LessThanOrEqual(b.MinOrderValueUSD) {
 		err = errors.Errorf("collateral usd value %s$ too small", collateralValue.String())
 		return
 	}

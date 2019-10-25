@@ -115,7 +115,7 @@ func checkEnv() (err error) {
 		"PRIVATE_KEY":            "B7A0C9D2786FC4DD080EA5D619D36771AEB0C8C26C290AFD3451B92BA2B7BC2C",
 		"MAX_SLIPPAGE":           "0.05",
 		"ETHEREUM_NODE_URL":      "https://mainnet.infura.io/v3/37851992caeb4289aa749112fe798621",
-		"MIN_AMOUNT_VALUE_USD":   "100",
+		"MIN_ORDER_VALUE_USD":    "100",
 		"MARKETS":                "ETH-USDT,ETH-DAI",
 		"PROFIT_MARGIN":          "0.01",
 		"GAS_PRICE_TIPS_IN_GWEI": "5",

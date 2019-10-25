@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -40,22 +41,22 @@ func StartGui() (err error) {
 	defer DefaultGui.Close()
 
 	maxX, maxY := DefaultGui.Size()
-	infoView, _ := DefaultGui.SetView("info", 0, maxY/3+1, maxX/2-1, maxY-1)
-	errorView, _ := DefaultGui.SetView("error", maxX/2, maxY/3+1, maxX-1, maxY-1)
+	infoView, _ := DefaultGui.SetView("info", 0, maxY/3+1, maxX-1, maxY-1)
 	auctionView, _ := DefaultGui.SetView("auction", 0, 0, maxX*2/3-1, maxY/3)
-	pnlView, _ := DefaultGui.SetView("pnl", maxX*2/3, 0, maxX-1, maxY/3)
+	pnlView, _ := DefaultGui.SetView("pnl", maxX/2, 0, maxX*3/4-1, maxY/3)
+	inventoryView, _ := DefaultGui.SetView("inventory", maxX*3/4, 0, maxX-1, maxY/3)
 	infoView.Title = "INFO"
 	infoView.Autoscroll = true
 	infoView.Wrap = true
-	errorView.Title = "WARN & ERROR"
-	errorView.Autoscroll = true
-	errorView.Wrap = true
 	auctionView.Title = "CURRENT AUCTIONS"
 	auctionView.Autoscroll = false
 	auctionView.Wrap = true
 	pnlView.Title = "PROFFIT & LOSS"
 	pnlView.Autoscroll = false
-	pnlView.Wrap = false
+	pnlView.Wrap = true
+	inventoryView.Title = "FREE BALANCE"
+	inventoryView.Autoscroll = false
+	inventoryView.Wrap = true
 
 	RegisterLogrusHooks()
 
@@ -120,6 +121,27 @@ func UpdatePnlView(position map[string]decimal.Decimal, price map[string]decimal
 	})
 }
 
+func UpdateInventoryView(ddexClient *client.DdexClient) {
+	inventory, err := ddexClient.GetInventory()
+	if err != nil {
+		return
+	}
+	DefaultGui.Update(func(g *gocui.Gui) error {
+		v, _ := g.View("inventory")
+		v.Clear()
+		fmt.Fprintln(v, fmt.Sprintf("Your address:%s", ddexClient.Address))
+		symbolList := []string{}
+		for symbol, _ := range inventory {
+			symbolList = append(symbolList, symbol)
+		}
+		sort.Strings(symbolList)
+		for _, symbol := range symbolList {
+			fmt.Fprintln(v, fmt.Sprintf("[%s] %s", symbol, inventory[symbol].Free.StringFixed(3)))
+		}
+		return nil
+	})
+}
+
 type viewHook struct{}
 
 func (hook *viewHook) Levels() []logrus.Level {
@@ -128,24 +150,19 @@ func (hook *viewHook) Levels() []logrus.Level {
 
 func (hook *viewHook) Fire(entry *logrus.Entry) error {
 	DefaultGui.Update(func(g *gocui.Gui) error {
-		var v *gocui.View
+		v, _ := g.View("info")
 		var prefix string
 
 		if entry.Level == logrus.InfoLevel {
-			v, _ = g.View("info")
 			prefix = GreenStr("[info]")
 		}
 		if entry.Level == logrus.DebugLevel {
-			v, _ = g.View("info")
 			prefix = BlueStr("[debug]")
 		}
-
 		if entry.Level == logrus.ErrorLevel {
-			v, _ = g.View("error")
 			prefix = RedStr("[error]")
 		}
 		if entry.Level == logrus.WarnLevel {
-			v, _ = g.View("error")
 			prefix = YellowStr("[warn]")
 		}
 
