@@ -12,7 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
-	"strconv"
 )
 
 func main() {
@@ -45,9 +44,19 @@ func startBot() (bot *cli.BidderBot, err error) {
 	maxSlippage, _ := decimal.NewFromString(os.Getenv("MAX_SLIPPAGE"))
 	ethereumNodeUrl := os.Getenv("ETHEREUM_NODE_URL")
 	minOrderValueUSD, _ := decimal.NewFromString(os.Getenv("MIN_ORDER_VALUE_USD"))
-	gasPriceInGwei, _ := strconv.Atoi(os.Getenv("GAS_PRICE_TIPS_IN_GWEI"))
 	profitMargin, _ := decimal.NewFromString(os.Getenv("PROFIT_MARGIN"))
 	markets := os.Getenv("MARKETS")
+
+	gasPriceLevel := os.Getenv("GAS_PRICE_LEVEL")
+	gasPriceTipsInGwei := 5
+	switch gasPriceLevel {
+	case "fast":
+		gasPriceTipsInGwei = 0
+	case "super-fast":
+		gasPriceTipsInGwei = 10
+	case "flash-boy":
+		gasPriceTipsInGwei = 25
+	}
 
 	ddexClient, err := client.NewDdexClient(privateKey)
 
@@ -64,7 +73,7 @@ func startBot() (bot *cli.BidderBot, err error) {
 		web3Client.NewBlockChannel(),
 		maxSlippage,
 		minOrderValueUSD,
-		gasPriceInGwei,
+		gasPriceTipsInGwei,
 		markets,
 		profitMargin,
 	}
@@ -112,13 +121,13 @@ func loadEnv(filePath string) (err error) {
 
 func checkEnv() (err error) {
 	requiredEnvDefaultValue := map[string]string{
-		"PRIVATE_KEY":            "B7A0C9D2786FC4DD080EA5D619D36771AEB0C8C26C290AFD3451B92BA2B7BC2C",
-		"MAX_SLIPPAGE":           "0.05",
-		"ETHEREUM_NODE_URL":      "https://mainnet.infura.io/v3/37851992caeb4289aa749112fe798621",
-		"MIN_ORDER_VALUE_USD":    "100",
-		"MARKETS":                "ETH-USDT,ETH-DAI",
-		"PROFIT_MARGIN":          "0.01",
-		"GAS_PRICE_TIPS_IN_GWEI": "5",
+		"PRIVATE_KEY":         "B7A0C9D2786FC4DD080EA5D619D36771AEB0C8C26C290AFD3451B92BA2B7BC2C",
+		"MAX_SLIPPAGE":        "0.05",
+		"ETHEREUM_NODE_URL":   "https://mainnet.infura.io/v3/37851992caeb4289aa749112fe798621",
+		"MIN_ORDER_VALUE_USD": "100",
+		"MARKETS":             "ETH-USDT,ETH-DAI",
+		"PROFIT_MARGIN":       "0.01",
+		"GAS_PRICE_LEVEL":     "fast",
 	}
 	if os.Getenv("NETWORK") == "ropsten" {
 		requiredEnvDefaultValue["ETHEREUM_NODE_URL"] = "https://ropsten.infura.io/v3/37851992caeb4289aa749112fe798621"

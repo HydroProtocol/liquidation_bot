@@ -57,7 +57,7 @@ func NewBidderClient(bidderPrivateKey string, assets map[string]*Asset, markets 
 	return
 }
 
-func (client *BidderClient) FillAuctioon(
+func (client *BidderClient) FillAuction(
 	auction *Auction,
 	repayDebt decimal.Decimal,
 	gasPriceInGwei int64,
@@ -150,8 +150,9 @@ func (client *BidderClient) GetSingleAuction(auctionID int64) (auction *Auction,
 		}
 	}
 
-	availableDetb := utils.HexString2Decimal(resp[2+64*4:2+64*5], -1*client.assets[debtSymbol].Decimal)
 	availableCollateral := utils.HexString2Decimal(resp[2+64*5:2+64*6], -1*client.assets[collateralSymbol].Decimal)
+	availableDetb := utils.HexString2Decimal(resp[2+64*4:2+64*5], -1*client.assets[debtSymbol].Decimal)
+	availableDetb = availableDetb.Mul(decimal.New(1, 0).Add(decimal.New(1, -5))) // the debt is growing while auction ongoing
 
 	ratio := utils.HexString2Decimal(resp[2+64*6:2+64*7], -18)
 	finished := utils.HexString2Decimal(resp[2+64*8:2+64*9], 0).IsPositive()

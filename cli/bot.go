@@ -24,6 +24,7 @@ type BidderBot struct {
 func (b *BidderBot) Run() {
 	b.updatePnlView()
 	for true {
+		UpdateInventoryView(b.DdexClient)
 		blockNum := <-b.BlockChannel
 		logrus.Infof("new block %d", blockNum)
 		allAuctions, err := b.BidderClient.GetAllAuctions()
@@ -90,7 +91,7 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 		logrus.Infof("auction price profitable!")
 		gasPriceInGwei := web3.GetGasPriceGwei() + int64(b.GasPriceTipsGwei)
 		logrus.Debugf("use gas price %d gwei", gasPriceInGwei)
-		txHash, err := b.BidderClient.FillAuctioon(auction, debt, gasPriceInGwei)
+		txHash, err := b.BidderClient.FillAuction(auction, debt, gasPriceInGwei)
 		if err != nil {
 			return err
 		}
