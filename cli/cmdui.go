@@ -42,7 +42,7 @@ func StartGui() (err error) {
 
 	maxX, maxY := DefaultGui.Size()
 	infoView, _ := DefaultGui.SetView("info", 0, maxY/3+1, maxX-1, maxY-1)
-	auctionView, _ := DefaultGui.SetView("auction", 0, 0, maxX*2/3-1, maxY/3)
+	auctionView, _ := DefaultGui.SetView("auction", 0, 0, maxX/2-1, maxY/3)
 	pnlView, _ := DefaultGui.SetView("pnl", maxX/2, 0, maxX*3/4-1, maxY/3)
 	inventoryView, _ := DefaultGui.SetView("inventory", maxX*3/4, 0, maxX-1, maxY/3)
 	infoView.Title = "INFO"
