@@ -71,7 +71,7 @@ The bot will ask for the following parameters for the first run:
 
 * `PROFIT_MARGIN` - I don't want to bid unless the profit margin greater than *X* `e.g. 0.01` (0.01 means 1%)
 	
-* `GAS_PRICE_LEVEL` - `fast`, `super-fast` or `flash-boy` will use *FAST* gas price from [ethgasstation](https://ethgasstation.info/) plus `0Gwei`, `10Gwei` and `25Gwei` perspectively
+* `GAS_PRICE_LEVEL` - `e.g. fast, super-fast or flash-boy` will use *FAST* gas price from [ethgasstation](https://ethgasstation.info/) plus `0Gwei`, `10Gwei` and `25Gwei` respectively to send transactions
 
 * `MAX_SLIPPAGE` - Don't arbitrage if the slippage greater than *X* `e.g. 0.05` (0.05 means 5%) 
 
