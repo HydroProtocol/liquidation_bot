@@ -13,11 +13,13 @@ The bot uses an arbitrage strategy: Sell collateral on DDEX immediately after re
  - An auction sell *10ETH* at price *160USDT*
  - The bot buy *10ETH*
  - The bot sell *10ETH* on ddex at price *170USDT*
- - Earn *100USDT*
+ - Earn *10\*170-10\*160=100USDT*
 
 ### Prerequisites
 
 You need to prepare some asset(e.g. ETH, USDT, DAI) in your DDEX spot trading balance. 
+
+![](docs/deposit.png)
 
 In order to run this container you'll need docker installed.
 
@@ -37,13 +39,19 @@ If you want to test on ropsten
 docker run -it --rm -v /your/file/path:/workingDir --name=auctionBidder --env NETWORK=ropsten hydroprotocolio/liquidation_bot:latest /bin/main
 ```
 
+### Screen Snapshot
+
+The bot try to fill every current auction when new block listened. It also records your profit and loss and show free trading balance of the address you use. 
+
+![](docs/screen_snapshot.jpg)
+
 #### Volumes
 
 * `/your/file/path` - Where liquidation history, config and logs stored
 
 ##### Useful File Locations
 
-* `/your/file/path/auctionBidderSqlite` - Your bid history
+* `/your/file/path/auctionBidderSqlite` - Your bid history is recorded in sqlite file
   
 * `/your/file/path/config.json` - Bot parameters
 
@@ -61,11 +69,11 @@ The bot will ask for the following parameters for the first run:
 	
 * `MIN_AMOUNT_VALUE_USD` - I don't want to participate the auction unless its USD value greater than *X* `e.g. 100`
 
-* `PROFIT_MARGIN` - I don't want to bid unless the profit margin greater than *X* `e.g. 0.01`
+* `PROFIT_MARGIN` - I don't want to bid unless the profit margin greater than *X* `e.g. 0.01` (0.01 means 1%)
 	
-* `GAS_PRICE_TIPS_IN_GWEI` - I would like to bid using gas price *FAST* from [ethgasstation](https://ethgasstation.info/). And, another *X* Gwei as tips. `e.g. 5`
+* `GAS_PRICE_LEVEL` - `fast`, `super-fast` or `flash-boy` will use *FAST* gas price from [ethgasstation](https://ethgasstation.info/) plus `0Gwei`, `10Gwei` and `25Gwei` perspectively
 
-* `MAX_SLIPPAGE` - Don't arbitrage if the slippage greater than *X* `e.g. 0.05` (0.05 means 5% slippage) 
+* `MAX_SLIPPAGE` - Don't arbitrage if the slippage greater than *X* `e.g. 0.05` (0.05 means 5%) 
 
 Edit `/your/file/path/config.json` and restart bot to adjust parameters.
 
