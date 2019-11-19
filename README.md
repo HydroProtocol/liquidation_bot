@@ -29,6 +29,8 @@ In order to run this container you'll need docker installed.
 
 ### Run Container
 
+Replace `/your/file/path` with your local directory.
+
 ```shell
 docker run -it --rm -v /your/file/path:/workingDir --name=auctionBidder hydroprotocolio/liquidation_bot:latest /bin/main
 ```
@@ -87,4 +89,4 @@ Edit `/your/file/path/config.json` and restart bot to adjust parameters.
 
 ## License
 
-This project is licensed under the Apache-2.0 License - see the [LICENSE.txt](LICENSE.txt) file for details
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details

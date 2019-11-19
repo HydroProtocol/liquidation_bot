@@ -1,0 +1,17 @@
+# compile env
+FROM golang:1.12
+
+ENV CGO_ENABLED 1
+ENV GOOS linux
+ENV GOARCH arm
+ENV GOARM 5
+ENV CC arm-linux-gnueabi-gcc
+
+WORKDIR /app
+COPY . /app
+RUN go mod download
+RUN go build -ldflags "-w -linkmode external -extldflags -static" -v -o main
+
+FROM alpine
+RUN apk --no-cache add ca-certificates
+COPY --from=0 /app/main /bin/main
