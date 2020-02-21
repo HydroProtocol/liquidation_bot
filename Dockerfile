@@ -1,4 +1,3 @@
-# compile env
 FROM golang:1.12
 
 WORKDIR /app
