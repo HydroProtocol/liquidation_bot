@@ -89,6 +89,7 @@ func NewDdexClient(privateKey string) (client *DdexClient, err error) {
 		utils.EmptyKeyPairList,
 		[]utils.KeyPair{{"Content-Type", "application/json"}})
 	if err != nil {
+		logrus.Error("call " + utils.JoinUrlPath(ddexBaseUrl, fmt.Sprintf("markets")) + " failed")
 		return
 	}
 	json.Unmarshal([]byte(resp), &dataContainer)

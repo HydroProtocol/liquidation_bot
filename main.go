@@ -26,15 +26,21 @@ func main() {
 
 	err = checkEnv()
 	if err != nil {
+		logrus.Error(err)
 		return
 	}
 
 	err = utils.InitDb()
 	if err != nil {
+		logrus.Error(err)
 		return
 	}
 
 	_, err = startBot()
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
 	return
 }
 
@@ -59,6 +65,9 @@ func startBot() (bot *cli.BidderBot, err error) {
 	}
 
 	ddexClient, err := client.NewDdexClient(privateKey)
+	if err != nil {
+		return
+	}
 
 	bidderClient, err := client.NewBidderClient(privateKey, ddexClient.Assets, ddexClient.Markets)
 	if err != nil {
@@ -81,7 +90,6 @@ func startBot() (bot *cli.BidderBot, err error) {
 	go bot.Run()
 
 	err = cli.StartGui()
-	logrus.Error(err)
 
 	return
 }
