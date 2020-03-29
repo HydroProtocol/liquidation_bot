@@ -35,7 +35,7 @@ func (b *BidderBot) Run() {
 		for _, auction := range allAuctions {
 			err := b.tryFillAuction(auction)
 			if err != nil {
-				logrus.Warnf("try fill auction #%d failed: %s", auction.ID, err.Error())
+				logrus.Errorf("try fill auction #%d failed: %s", auction.ID, err.Error())
 			}
 		}
 	}
@@ -44,6 +44,7 @@ func (b *BidderBot) Run() {
 func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 	// check if the market is under monitor
 	if !strings.Contains(b.Markets, auction.TradingPair) {
+		logrus.Debugf("auction trading pair %s is not in monitor list %s", auction.TradingPair, b.Markets)
 		return nil
 	}
 	logrus.Debugf("try fill auction %d", auction.ID)
@@ -85,7 +86,7 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 	}
 
 	if receive.LessThanOrEqual(debt.Add(debt.Mul(b.ProfitMargin))) {
-		err = errors.Errorf("auction price not profitable, wait next block")
+		logrus.Warnf("auction price not profitable, wait next block")
 		return
 	} else {
 		logrus.Infof("auction price profitable!")
@@ -113,8 +114,11 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 			err = errors.New("bid transaction failed")
 			return err
 		}
-		// todo if hedge failed anyway, give a red alert
+		// todo: if hedge failed anyway, give a red alert
 		ddexOrderId, ddexSellCollateral, ddexReceiveDebt, err := b.DdexClient.PromisedMarketSellAsset(auction.TradingPair, auction.CollateralSymbol, collateralForBidder, b.MaxSlippage)
+		if err != nil {
+			return err
+		}
 		logrus.Infof("hedge at ddex market: sell %s%s receive %s%s",
 			ddexSellCollateral.String(),
 			auction.CollateralSymbol,
@@ -122,9 +126,6 @@ func (b *BidderBot) tryFillAuction(auction *client.Auction) (err error) {
 			auction.DebtSymbol,
 		)
 
-		if err != nil {
-			return err
-		}
 		utils.InsertAuctionRes(
 			txHash,
 			int(auction.ID),
